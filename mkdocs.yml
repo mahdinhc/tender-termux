@@ -1,0 +1,3 @@
+site_name: Tender Docs
+deploy:
+  branch: gh-pages

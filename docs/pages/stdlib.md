@@ -1,0 +1,26 @@
+# Standard Library
+
+- [math](stdlib-math.md): Mathematical constants and functions.
+- [os](stdlib-os.md): Platform-independent interface to operating system functionality.
+- [strings](stdlib-strings.md): Regular expressions, string conversion, and manipulation.
+- [times](stdlib-times.md): Time-related functions.
+- [rand](stdlib-rand.md): Random functions.
+- [fmt](stdlib-fmt.md): Formatting functions.
+- [json](stdlib-json.md): JSON functions.
+- [base64](stdlib-base64.md): Base64 encoding and decoding functions.
+- [hex](stdlib-hex.md): Hex encoding and decoding functions.
+- [colors](stdlib-colors.md): Functions for printing colored text to the terminal.
+- [gzip](stdlib-gzip.md): Functions for compressing and decompressing data using gzip.
+- [zip](stdlib-zip.md): Functions for working with ZIP archives.
+- [tar](stdlib-tar.md): Functions for creating and reading TAR archives.
+- [bufio](stdlib-bufio.md): Buffered I/O functions.
+- [crypto](stdlib-crypto.md): Cryptographic functions.
+- [path](stdlib-path.md): Functions for manipulating file paths.
+- [image](stdlib-image.md): Functions for manipulating images.
+- [canvas](stdlib-canvas.md): Functions for drawing graphics on a canvas.
+- [dll](stdlib-dll.md): Functions for interacting with dynamic link libraries.
+- [io](stdlib-io.md): Input and output functions.
+- [audio](stdlib-audio.md): Audio processing functions.
+- [net](stdlib-net.md): Networking functions.
+- [http](stdlib-http.md): Functions for HTTP client and server interactions.
+- [websocket](stdlib-websocket.md): Functions for working with WebSockets.
