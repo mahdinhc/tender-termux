@@ -4,13 +4,43 @@
 
 ## Overview
 
-Tender is compiled and executed as bytecode on a stack-based virtual machine (VM) written in native Golang.
+Tender compiles into bytecode and executes on a stack-based virtual machine (VM) written in native Golang.
 
 ## Features
 - **Simple and highly readable syntax**  
-- **Compiles into bytecode**  
-- **Supports rich built-in modules**  
+- **Compiles to bytecode**  
+- **Supports rich [built-in functions](docs/builtins.md)**  
+- **Includes an extensive [standard library](docs/stdlib.md)**  
 - **Optimized for 2D graphics**  
+
+### Supported Standard Library
+
+- [math](docs/stdlib-math.md): Mathematical constants and functions  
+- [os](docs/stdlib-os.md): Platform-independent interface to OS functionality  
+- [strings](docs/stdlib-strings.md): String conversion, manipulation, and regular expressions  
+- [times](docs/stdlib-times.md): Time-related functions  
+- [rand](docs/stdlib-rand.md): Random number generation  
+- [fmt](docs/stdlib-fmt.md): Formatting functions  
+- [json](docs/stdlib-json.md): JSON handling functions  
+- [base64](docs/stdlib-base64.md): Base64 encoding and decoding  
+- [hex](docs/stdlib-hex.md): Hexadecimal encoding and decoding  
+- [colors](docs/stdlib-colors.md): Functions to print colored text to the terminal  
+- [gzip](docs/stdlib-gzip.md): Gzip compression and decompression  
+- [zip](docs/stdlib-zip.md): ZIP archive manipulation  
+- [tar](docs/stdlib-tar.md): TAR archive creation and reading  
+- [bufio](docs/stdlib-bufio.md): Buffered I/O functions  
+- [crypto](docs/stdlib-crypto.md): Cryptographic functions  
+- [path](docs/stdlib-path.md): File path manipulation  
+- [image](docs/stdlib-image.md): Image manipulation  
+- [canvas](docs/stdlib-canvas.md): Drawing functions for canvases  
+- [dll](docs/stdlib-dll.md): Dynamic link library interactions  
+- [io](docs/stdlib-io.md): Input and output functions  
+- [audio](docs/stdlib-audio.md): Audio processing  
+- [net](docs/stdlib-net.md): Networking functions  
+- [http](docs/stdlib-http.md): HTTP client and server utilities  
+- [websocket](docs/stdlib-websocket.md): WebSocket communication utilities  
+- **gob**: Gob Encoding/Ddecoding
+- **csv**: CSV Encoding/Ddecoding
 
 ## Quick Start
 
@@ -30,9 +60,9 @@ println(str1 + " " + str2)
 import "canvas"
 	
 var ctx = canvas.new_context(100, 100)
-ctx.hex("#0f0")        // Set color to green
-ctx.dash(4, 2)         // Define dashed stroke
-ctx.rect(25, 25, 50, 50)  // Draw a rectangle
+ctx.hex("#0f0")          // Set color to green
+ctx.dash(4, 2)           // Define dashed stroke
+ctx.rect(25, 25, 50, 50) // Draw a rectangle
 ctx.stroke()
 
 ctx.save_png("out.png")  // Save output as PNG
@@ -49,40 +79,27 @@ tender hello.td
 
 ## Installation
 
-1. **Download the repository.**  
-2. **Run the `install.sh` script** to install Tender on your system.
+### Using Go
 
-### Windows (Manual Installation)
-1. **Download the `tender.exe` binary** for your system from the [bin](bin) directory, along with the `pkg` folder from [pkg](pkg).  
-2. **Copy the files to your desired location** with the following structure:
+1. Install the latest version of Go.  
+2. Run the following command to install:
 
 ```bash
-├───bin
-│   └───tender.exe
-└───pkg
-    │   ansi.td
-    │   cinf.td
-    │   console.td
-    │   enum.td
-    │   fs.td
-    │   matrix.td
-    │   messagebox.td
-    │   utf8.td
-    │   vec2.td
-    │   xml.td
-    └───helper
+go install github.com/2dprototype/tender/cmd/tender@latest
 ```
 
-3. **Add the path to the `bin` folder** to your system's environment variables.
+### Manual Installation (Windows)
+
+Precompiled binaries are available. Download them from the release tags.
 
 ---
 
 ## Documentation
 
-- **[Runtime Types](https://github.com/2dprototype/tender/blob/master/docs/runtime-types.md)**  
-- **[Built-ins](https://github.com/2dprototype/tender/blob/master/docs/builtins.md)**  
-- **[Operators](https://github.com/2dprototype/tender/blob/master/docs/operators.md)**  
-- **[Standard Library](https://github.com/2dprototype/tender/blob/master/docs/stdlib.md)**  
+- **[Runtime Types](docs/runtime-types.md)**  
+- **[Built-in Functions](docs/builtins.md)**  
+- **[Operators](docs/operators.md)**  
+- **[Standard Library](docs/stdlib.md)**  
 
 ## Examples
 
@@ -104,16 +121,16 @@ Tender uses the following dependencies:
 
 ## Syntax Highlighting
 
-Syntax highlighting is currently available only for **Notepad++**. Download the configuration file from [here](misc/syntax/npp_tender.xml).
+Syntax highlighting is currently available only for **Notepad++**. Download the configuration file [here](misc/syntax/npp_tender.xml).
 
 ---
 
 ## License
 
-Tender is distributed under the [MIT License](LICENSE). Additional licenses for third-party dependencies are provided in [LICENSE_GOLANG](LICENSE_GOLANG) and [LICENSE_TENGO](LICENSE_TENGO).
+Tender is distributed under the [MIT License](LICENSE), with additional licenses provided for third-party dependencies. See [LICENSE_GOLANG](LICENSE_GOLANG) and [LICENSE_TENGO](LICENSE_TENGO) for more information.
 
 ---
 
 ## Acknowledgments
 
-Tender is written in Go and inspired by **Tengo**. We extend our gratitude to the contributors of Tengo for their valuable work.
+Tender is written in Go, based on Tengo. We extend our gratitude to the contributors of Tengo for their valuable work.
