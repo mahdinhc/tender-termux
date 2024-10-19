@@ -9,36 +9,36 @@ Tender compiles into bytecode and executes on a stack-based virtual machine (VM)
 ## Features
 - **Simple and highly readable syntax**  
 - **Compiles to bytecode**  
-- **Supports rich [built-in functions](docs/builtins.md)**  
-- **Includes an extensive [standard library](docs/stdlib.md)**  
+- **Supports rich [built-in functions](docs/pages/builtins.md)**  
+- **Includes an extensive [standard library](docs/pages/stdlib.md)**  
 - **Optimized for 2D graphics**  
 
 ### Supported Standard Library
 
-- [math](docs/stdlib-math.md): Mathematical constants and functions  
-- [os](docs/stdlib-os.md): Platform-independent interface to OS functionality  
-- [strings](docs/stdlib-strings.md): String conversion, manipulation, and regular expressions  
-- [times](docs/stdlib-times.md): Time-related functions  
-- [rand](docs/stdlib-rand.md): Random number generation  
-- [fmt](docs/stdlib-fmt.md): Formatting functions  
-- [json](docs/stdlib-json.md): JSON handling functions  
-- [base64](docs/stdlib-base64.md): Base64 encoding and decoding  
-- [hex](docs/stdlib-hex.md): Hexadecimal encoding and decoding  
-- [colors](docs/stdlib-colors.md): Functions to print colored text to the terminal  
-- [gzip](docs/stdlib-gzip.md): Gzip compression and decompression  
-- [zip](docs/stdlib-zip.md): ZIP archive manipulation  
-- [tar](docs/stdlib-tar.md): TAR archive creation and reading  
-- [bufio](docs/stdlib-bufio.md): Buffered I/O functions  
-- [crypto](docs/stdlib-crypto.md): Cryptographic functions  
-- [path](docs/stdlib-path.md): File path manipulation  
-- [image](docs/stdlib-image.md): Image manipulation  
-- [canvas](docs/stdlib-canvas.md): Drawing functions for canvases  
-- [dll](docs/stdlib-dll.md): Dynamic link library interactions  
-- [io](docs/stdlib-io.md): Input and output functions  
-- [audio](docs/stdlib-audio.md): Audio processing  
-- [net](docs/stdlib-net.md): Networking functions  
-- [http](docs/stdlib-http.md): HTTP client and server utilities  
-- [websocket](docs/stdlib-websocket.md): WebSocket communication utilities  
+- [math](docs/pages/stdlib-math.md): Mathematical constants and functions  
+- [os](docs/pages/stdlib-os.md): Platform-independent interface to OS functionality  
+- [strings](docs/pages/stdlib-strings.md): String conversion, manipulation, and regular expressions  
+- [times](docs/pages/stdlib-times.md): Time-related functions  
+- [rand](docs/pages/stdlib-rand.md): Random number generation  
+- [fmt](docs/pages/stdlib-fmt.md): Formatting functions  
+- [json](docs/pages/stdlib-json.md): JSON handling functions  
+- [base64](docs/pages/stdlib-base64.md): Base64 encoding and decoding  
+- [hex](docs/pages/stdlib-hex.md): Hexadecimal encoding and decoding  
+- [colors](docs/pages/stdlib-colors.md): Functions to print colored text to the terminal  
+- [gzip](docs/pages/stdlib-gzip.md): Gzip compression and decompression  
+- [zip](docs/pages/stdlib-zip.md): ZIP archive manipulation  
+- [tar](docs/pages/stdlib-tar.md): TAR archive creation and reading  
+- [bufio](docs/pages/stdlib-bufio.md): Buffered I/O functions  
+- [crypto](docs/pages/stdlib-crypto.md): Cryptographic functions  
+- [path](docs/pages/stdlib-path.md): File path manipulation  
+- [image](docs/pages/stdlib-image.md): Image manipulation  
+- [canvas](docs/pages/stdlib-canvas.md): Drawing functions for canvases  
+- [dll](docs/pages/stdlib-dll.md): Dynamic link library interactions  
+- [io](docs/pages/stdlib-io.md): Input and output functions  
+- [audio](docs/pages/stdlib-audio.md): Audio processing  
+- [net](docs/pages/stdlib-net.md): Networking functions  
+- [http](docs/pages/stdlib-http.md): HTTP client and server utilities  
+- [websocket](docs/pages/stdlib-websocket.md): WebSocket communication utilities  
 - **gob**: Gob Encoding/Ddecoding
 - **csv**: CSV Encoding/Ddecoding
 
@@ -96,10 +96,10 @@ Precompiled binaries are available. Download them from the release tags.
 
 ## Documentation
 
-- **[Runtime Types](docs/runtime-types.md)**  
-- **[Built-in Functions](docs/builtins.md)**  
-- **[Operators](docs/operators.md)**  
-- **[Standard Library](docs/stdlib.md)**  
+- **[Runtime Types](docs/pages/runtime-types.md)**  
+- **[Built-in Functions](docs/pages/builtins.md)**  
+- **[Operators](docs/pages/operators.md)**  
+- **[Standard Library](docs/pages/stdlib.md)**  
 
 ## Examples
 
