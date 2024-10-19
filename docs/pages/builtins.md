@@ -24,14 +24,6 @@ Prints the provided arguments without adding a new line.
 print("Hello, World!") // Output: Hello, World!
 ```
 
-## printf
-
-Formats and prints the provided arguments according to the format specifier.
-
-```golang
-printf("Hello, %s!", "World") // Output: Hello, World!
-```
-
 ## println
 
 Prints the provided arguments followed by a new line.
@@ -288,9 +280,17 @@ Returns `true` if the object's type is cycle. Or it returns `false`.
 
 Returns `true` if the object's type is int. Or it returns `false`.
 
+## is_bigint
+
+Returns `true` if the object's type is bigint. Or it returns `false`.
+
 ## is_float
 
 Returns `true` if the object's type is float. Or it returns `false`.
+
+## is_bigfloat
+
+Returns `true` if the object's type is bigfloat. Or it returns `false`.
 
 ## is_string
 

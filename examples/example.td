@@ -45,7 +45,7 @@ sum := fn(seq) {
 }
 println("sum: ", sum([1, 2, 3])) // 6
 
-map_to_array := fn(m) {
+fn map_to_array (m) {
     arr := []
     // Map iteration
     for key, value in m {

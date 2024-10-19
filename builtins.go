@@ -18,7 +18,6 @@ func init() {
 	addBuiltinFunction("debug", builtinDebug, true)
 	addBuiltinFunction("sysout", builtinSysout, false)
 	addBuiltinFunction("print", builtinPrint, false)
-	addBuiltinFunction("printf", builtinPrintf, false)
 	addBuiltinFunction("println", builtinPrintln, false)
 	addBuiltinFunction("reverse", builtinReverse, false)
 	addBuiltinFunction("includes", builtinIncludes, false)
@@ -118,33 +117,6 @@ func builtinPrint(args ...Object) (Object, error) {
 		}
 	}
 	fmt.Print(str)
-	return nil, nil
-}
-
-func builtinPrintf(args ...Object) (Object, error) {
-	numArgs := len(args)
-	if numArgs == 0 {
-		return nil, ErrWrongNumArguments
-	}
-
-	format, ok := args[0].(*String)
-	if !ok {
-		return nil, ErrInvalidArgumentType{
-			Name:     "format",
-			Expected: "string",
-			Found:    args[0].TypeName(),
-		}
-	}
-	if numArgs == 1 {
-		fmt.Print(format)
-		return nil, nil
-	}
-
-	s, err := Format(format.Value, args[1:]...)
-	if err != nil {
-		return wrapError(err), nil
-	}
-	fmt.Print(s)
 	return nil, nil
 }
 

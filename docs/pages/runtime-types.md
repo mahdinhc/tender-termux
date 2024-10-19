@@ -1,8 +1,10 @@
 # Tender Runtime Types
 
 - **Int**: signed 64bit integer
+- **BigInt**: arbitrary-precision integer (big integer)
 - **String**: string
 - **Float**: 64bit floating point
+- **BigFloat**: arbitrary-precision floating point (big float)
 - **Bool**: boolean
 - **Char**: character (`rune` in Go)
 - **Bytes**: byte array (`[]byte` in Go)
@@ -20,8 +22,10 @@
 |src\dst  |Int      |String        |Float    |Bool      |Char   |Bytes  |Array  |Map    |Time   |Error  |Null|
 | :---:   | :---:   | :---:        | :---:   | :---:    | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 |Int      |   -     |_strconv_     |float64(v)|!IsFalsy()| rune(v)|**X**|**X**|**X**|_time.Unix()_|**X**|**X**|
+|BigInt   |   -     |       -      |         |!IsFalsy()|   -     |**X**|**X**|**X**|     -       |**X**|**X**|
 |String   |_strconv_|   -          |_strconv_|!IsFalsy()|**X**|[]byte(s)|**X**|**X**|**X**|**X**|**X**|
 |Float    |int64(f) |_strconv_     | -       |!IsFalsy()|**X**|**X**|**X**|**X**|**X**|**X**|**X**|
+|BigFloat |   -     |       -      |         |!IsFalsy()|   -     |**X**|**X**|**X**|     -       |**X**|**X**|
 |Bool     |1 / 0    |"true" / "false"|**X**    |   -   |**X**|**X**|**X**|**X**|**X**|**X**|**X**|
 |Char     |int64(c) |string(c)     |**X**    |!IsFalsy()|   -   |**X**|**X**|**X**|**X**|**X**|**X**|
 |Bytes    |**X**    |string(y)|**X**    |!IsFalsy()|**X**|   -   |**X**|**X**|**X**|**X**|**X**|
@@ -71,8 +75,10 @@ should evaluate to `false` (e.g. for condition expression of `if` statement).
 
 - `is_string(x)`: returns `true` if `x` is string; `false` otherwise
 - `is_int(x)`: returns `true` if `x` is int; `false` otherwise
+- `is_bigint(x)`: returns `true` if `x` is bigint; `false` otherwise
 - `is_bool(x)`: returns `true` if `x` is bool; `false` otherwise
 - `is_float(x)`: returns `true` if `x` is float; `false` otherwise
+- `is_bigfloat(x)`: returns `true` if `x` is bigfloat; `false` otherwise
 - `is_char(x)`: returns `true` if `x` is char; `false` otherwise
 - `is_bytes(x)`: returns `true` if `x` is bytes; `false` otherwise
 - `is_array(x)`: return `true` if `x` is array; `false` otherwise

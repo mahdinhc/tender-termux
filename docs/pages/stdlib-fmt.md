@@ -44,6 +44,22 @@ Reads a line from standard input.
 
 Returns the input as a `string`.
 
+#### `fprint(IOWriter, args...)`
+
+Prints the arguments to standard output without a newline using IOWriter.
+
+- `IOWriter`: stdlib.IOWriter object.
+- `args`: The objects to format.
+
+#### `fprintln(IOWriter, args...)`
+
+Prints the arguments to standard output with a newline using IOWriter.
+
+- `IOWriter`: stdlib.IOWriter object.
+- `args`: The objects to format.
+
+Returns the formatted string as a `string`.
+
 ### Example Usage
 
 ```go
@@ -65,4 +81,16 @@ println(formatted_string)
 // Scanln example
 input := fmt.scanln()
 println("You entered: ", input)
+```
+
+#### `fprint, fprintln` Example
+
+```go
+import "fmt"
+import "colors"
+import "os"
+
+fmt.fprint(colors.stdout, "Hello".red, "World".green, "\n")
+fmt.fprintln(colors.stderr, "Hello".red, "World".green)
+fmt.fprintln(os.stdout, "Hello".red, "World".green, "\n")
 ```

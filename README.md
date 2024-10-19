@@ -1,6 +1,6 @@
 # Tender
 
-**Tender** is a general-purpose programming language specially designed for image processing, 2D graphics, scripting, and more!
+**Tender** is a general-purpose programming language specially designed for image processing, 2D graphics, scripting, and more! Here is a quick [tutorial](docs/pages/tutorial.md). Also check the [docs](https://2dprototype.github.io/tender)!
 
 ## Overview
 
@@ -95,6 +95,7 @@ Precompiled binaries are available. Download them from the release tags.
 ---
 
 ## Documentation
+Check the [docs](https://2dprototype.github.io/tender)!
 
 - **[Runtime Types](docs/pages/runtime-types.md)**  
 - **[Built-in Functions](docs/pages/builtins.md)**  

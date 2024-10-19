@@ -280,7 +280,7 @@ func RunREPL(modules *tender.ModuleMap, in io.Reader, out io.Writer) {
 		},
 	}
 	
-	fmt.Println("github.com/2dprototype/tender " + version + " (REPL)")
+	fmt.Println("tender " + version + " (REPL)")
 	fmt.Println(`Type ".exit" to end the program`)
 
 	var constants []tender.Object

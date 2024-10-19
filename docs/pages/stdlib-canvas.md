@@ -132,8 +132,8 @@ canvas.new_window(options, fn(w){
 - `text_anchored(text, x, y, anchor_x, anchor_y)`
 - `measure_text(text)`
 - `measure_multiline_text(text)`
-- `load_fontface(font_path)`
-- `fontface(font_data)`
+- `load_fontface(font_path, size)`
+- `fontface(font_data, size)`
 - `fontheight()`
 
 #### Transformation Functions
