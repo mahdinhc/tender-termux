@@ -6,6 +6,20 @@ import (
 )
 
 var colorsModule = map[string]tender.Object{
-	"stdout": &IOWriter{Value: colorable.NewColorableStdout()},
-	"stderr": &IOWriter{Value: colorable.NewColorableStderr()},
+	"stdout": &tender.UserFunction{
+		Value: func(args ...tender.Object) (tender.Object, error) {
+			if len(args) != 0 {
+				return nil, tender.ErrWrongNumArguments
+			}
+			return &IOWriter{Value: colorable.NewColorableStdout()}, nil
+		},
+	},	
+	"stderr": &tender.UserFunction{
+		Value: func(args ...tender.Object) (tender.Object, error) {
+			if len(args) != 0 {
+				return nil, tender.ErrWrongNumArguments
+			}
+			return &IOWriter{Value: colorable.NewColorableStderr()}, nil
+		},
+	},
 }

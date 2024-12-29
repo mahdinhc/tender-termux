@@ -13,9 +13,33 @@ import (
 )
 
 var osModule = map[string]tender.Object{
-	"stdout":              &IOWriter{Value: os.Stdout},
-	"stderr":              &IOWriter{Value: os.Stderr},
-	"stdin":               &IOReader{Value: os.Stdin},
+	// "stdout":              &IOWriter{Value: os.Stdout},
+	// "stderr":              &IOWriter{Value: os.Stderr},
+	// "stdin":               &IOReader{Value: os.Stdin},
+	"stdout": &tender.UserFunction{
+		Value: func(args ...tender.Object) (tender.Object, error) {
+			if len(args) != 0 {
+				return nil, tender.ErrWrongNumArguments
+			}
+			return &IOWriter{Value: os.Stdout}, nil
+		},
+	},	
+	"stderr": &tender.UserFunction{
+		Value: func(args ...tender.Object) (tender.Object, error) {
+			if len(args) != 0 {
+				return nil, tender.ErrWrongNumArguments
+			}
+			return &IOWriter{Value: os.Stderr}, nil
+		},
+	},
+	"stdin": &tender.UserFunction{
+		Value: func(args ...tender.Object) (tender.Object, error) {
+			if len(args) != 0 {
+				return nil, tender.ErrWrongNumArguments
+			}
+			return &IOWriter{Value: os.Stdin}, nil
+		},
+	},
 	"platform":            &tender.String{Value: runtime.GOOS},
 	"arch":                &tender.String{Value: runtime.GOARCH},
 	"o_rdonly":            &tender.Int{Value: int64(os.O_RDONLY)},

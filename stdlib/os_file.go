@@ -9,8 +9,24 @@ import (
 func makeOSFile(file *os.File) *tender.ImmutableMap {
 	return &tender.ImmutableMap{
 		Value: map[string]tender.Object{
-			"writer": &IOWriter{Value: file},
-			"reader": &IOReader{Value: file},
+			// "writer": &IOWriter{Value: file},
+			// "reader": &IOReader{Value: file},
+			"writer": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					return &IOWriter{Value: file}, nil
+				},
+			},	
+			"reader": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					return &IOWriter{Value:file}, nil
+				},
+			},
 			"chdir": &tender.UserFunction{
 				Value: FuncARE(file.Chdir),
 			},
