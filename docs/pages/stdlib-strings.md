@@ -1,4 +1,4 @@
-## strings Module Documentation
+## strings Module
 
 The `strings` module provides functionalities for manipulating strings.
 

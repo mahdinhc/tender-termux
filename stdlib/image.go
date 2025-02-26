@@ -16,9 +16,9 @@ import (
 )
 
 var imageModule = map[string]tender.Object{
-	"new": &tender.UserFunction{Name: "new", Value: imageNew},
-	"load" : &tender.UserFunction{Name: "load", Value: imageLoad},
-	"decode" : &tender.UserFunction{Name: "decode", Value: imageDecode},
+	"new": &tender.UserFunction{Value: imageNew},
+	"load" : &tender.UserFunction{Value: imageLoad},
+	"decode" : &tender.UserFunction{Value: imageDecode},
 	"formats" : &tender.ImmutableArray{Value: []tender.Object{
 			&tender.String{Value: "png"},
 			&tender.String{Value: "jpeg"},
@@ -112,6 +112,7 @@ func makeImage(img image.Image) *tender.ImmutableMap {
 
 	return &tender.ImmutableMap{
 		Value: map[string]tender.Object{
+			"filters": makeImageFilters(img),
 			"encode" : &tender.UserFunction{
 				Name: "encode",
 				Value: func(args ...tender.Object) (tender.Object, error) {
