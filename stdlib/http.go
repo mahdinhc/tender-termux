@@ -2,10 +2,9 @@ package stdlib
 
 import (
 	"bytes"
-	// "encoding/json"
-	_"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"github.com/2dprototype/tender"
 )
 
@@ -20,6 +19,7 @@ var httpModule = map[string]tender.Object{
 	"trace":   &tender.UserFunction{Name: "trace", Value: httpTrace},
 }
 
+// httpRequest creates an http.Request and wraps it in an object with helper methods.
 func httpRequest(method string, args ...tender.Object) (ret tender.Object, err error) {
 	if len(args) < 1 || len(args) > 3 {
 		return nil, tender.ErrWrongNumArguments
@@ -45,56 +45,182 @@ func httpRequest(method string, args ...tender.Object) (ret tender.Object, err e
 				Found:    args[2].TypeName(),
 			}
 		}
-
 		for key, value := range headersObj.Value {
 			valueStr, _ := value.(*tender.String)
 			req.Header.Set(key, valueStr.Value)
 		}
-
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return wrapError(err), nil
-	}
-	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return wrapError(err), nil
-	}
-
-	return &tender.Bytes{Value: respBody}, nil
+	return makeHttpReq(req), nil
 }
 
-func httpGet(args ...tender.Object) (ret tender.Object, err error) {
+func makeHttpReq(req *http.Request) *tender.ImmutableMap {
+	return &tender.ImmutableMap{
+		Value: map[string]tender.Object{
+			"close":   tender.FromBool(req.Close),
+			// "method":  &tender.String{Value: req.Method},
+			"method":  &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					return &tender.String{Value: req.Method}, nil
+				},
+			},
+			"url":     &tender.UserFunction{Value: FuncARS(req.URL.String)},
+			"headers": makeHeaderMap(req.Header),
+			// Executes the request and returns only the body as bytes.
+			"body": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						return wrapError(err), nil
+					}
+					defer resp.Body.Close()
+					respBody, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						return wrapError(err), nil
+					}
+					return &tender.Bytes{Value: respBody}, nil
+				},
+			},
+			// Executes the request and returns a full response object.
+			"execute": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					client := &http.Client{}
+					resp, err := client.Do(req)
+					if err != nil {
+						return wrapError(err), nil
+					}
+					defer resp.Body.Close()
+					respBody, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+						return wrapError(err), nil
+					}
+					return makeHttpResponse(resp, respBody), nil
+				},
+			},
+			// Get the value of a header by key.
+			"get_header": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					key, _ := tender.ToString(args[0])
+					return &tender.String{Value: req.Header.Get(key)}, nil
+				},
+			},
+			// Set a header (overwrites if exists).
+			"set_header": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 2 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					key, _ := tender.ToString(args[0])
+					value, _ := tender.ToString(args[1])
+					req.Header.Set(key, value)
+					return nil, nil
+				},
+			},
+			// Set the request body.
+			"set_body": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					body, _ := tender.ToByteSlice(args[0])
+					req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+					return nil, nil
+				},
+			},
+			// Change the HTTP method.
+			"set_method": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					m, _ := tender.ToString(args[0])
+					req.Method = m
+					return nil, nil
+				},
+			},
+			// Change the URL.
+			"set_url": &tender.UserFunction{
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					urlStr, _ := tender.ToString(args[0])
+					// Recreate the request URL; we reuse the current method and body.
+					parsedReq, err := http.NewRequest(req.Method, urlStr, req.Body)
+					if err != nil {
+						return wrapError(err), nil
+					}
+					req.URL = parsedReq.URL
+					return nil, nil
+				},
+			},
+		},
+	}
+}
+
+func makeHeaderMap(headers http.Header) *tender.Map {
+	headerMap := make(map[string]tender.Object)
+	for key, values := range headers {
+		if len(values) > 0 {
+			headerMap[key] = &tender.String{Value: values[0]}
+		}
+	}
+	return &tender.Map{Value: headerMap}
+}
+
+func makeHttpResponse(resp *http.Response, body []byte) *tender.ImmutableMap {
+	return &tender.ImmutableMap{
+		Value: map[string]tender.Object{
+			"status":      &tender.Int{Value: int64(resp.StatusCode)},
+			"status_text":  &tender.String{Value: resp.Status},
+			"headers":     makeHeaderMap(resp.Header),
+			"body":        &tender.Bytes{Value: body},
+			"content_type": &tender.String{Value: resp.Header.Get("Content-Type")},
+		},
+	}
+}
+
+func httpGet(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("GET", args...)
 }
 
-func httpPost(args ...tender.Object) (ret tender.Object, err error) {
+func httpPost(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("POST", args...)
 }
 
-func httpPut(args ...tender.Object) (ret tender.Object, err error) {
+func httpPut(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("PUT", args...)
 }
 
-func httpDelete(args ...tender.Object) (ret tender.Object, err error) {
+func httpDelete(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("DELETE", args...)
 }
 
-func httpPatch(args ...tender.Object) (ret tender.Object, err error) {
+func httpPatch(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("PATCH", args...)
 }
 
-func httpOptions(args ...tender.Object) (ret tender.Object, err error) {
+func httpOptions(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("OPTIONS", args...)
 }
 
-func httpHead(args ...tender.Object) (ret tender.Object, err error) {
+func httpHead(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("HEAD", args...)
 }
 
-func httpTrace(args ...tender.Object) (ret tender.Object, err error) {
+func httpTrace(args ...tender.Object) (tender.Object, error) {
 	return httpRequest("TRACE", args...)
 }
