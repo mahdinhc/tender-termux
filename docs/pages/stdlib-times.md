@@ -1,4 +1,4 @@
-# times Module
+# Stdlin times
 
 The `times` module provides functions and constants for working with time-related operations.
 

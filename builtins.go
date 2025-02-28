@@ -37,14 +37,16 @@ func init() {
 	addBuiltinFunction("bool", builtinBool, false)
 	addBuiltinFunction("float", builtinFloat, false)
 	addBuiltinFunction("bigfloat", builtinBigFloat, false)
+	addBuiltinFunction("complex", builtinComplex, false)
 	addBuiltinFunction("char", builtinChar, false)
 	addBuiltinFunction("bytes", builtinBytes, false)
 	addBuiltinFunction("time", builtinTime, false)
 	addBuiltinFunction("is_cycle", builtinIsCycle, false)
 	addBuiltinFunction("is_int", builtinIsInt, false)
+	addBuiltinFunction("is_float", builtinIsFloat, false)
 	addBuiltinFunction("is_bigint", builtinIsBigInt, false)
-	addBuiltinFunction("is_float", builtinIsBigFloat, false)
-	addBuiltinFunction("is_bigfloat", builtinIsFloat, false)
+	addBuiltinFunction("is_bigfloat", builtinIsBigFloat, false)
+	addBuiltinFunction("is_complex", builtinIsComplex, false)
 	addBuiltinFunction("is_string", builtinIsString, false)
 	addBuiltinFunction("is_bool", builtinIsBool, false)
 	addBuiltinFunction("is_char", builtinIsChar, false)
@@ -722,16 +724,6 @@ func builtinIsInt(args ...Object) (Object, error) {
 	return FalseValue, nil
 }
 
-func builtinIsBigInt(args ...Object) (Object, error) {
-	if len(args) != 1 {
-		return nil, ErrWrongNumArguments
-	}
-	if _, ok := args[0].(*BigInt); ok {
-		return TrueValue, nil
-	}
-	return FalseValue, nil
-}
-
 func builtinIsFloat(args ...Object) (Object, error) {
 	if len(args) != 1 {
 		return nil, ErrWrongNumArguments
@@ -742,11 +734,31 @@ func builtinIsFloat(args ...Object) (Object, error) {
 	return FalseValue, nil
 }
 
+func builtinIsBigInt(args ...Object) (Object, error) {
+	if len(args) != 1 {
+		return nil, ErrWrongNumArguments
+	}
+	if _, ok := args[0].(*BigInt); ok {
+		return TrueValue, nil
+	}
+	return FalseValue, nil
+}
+
 func builtinIsBigFloat(args ...Object) (Object, error) {
 	if len(args) != 1 {
 		return nil, ErrWrongNumArguments
 	}
 	if _, ok := args[0].(*BigFloat); ok {
+		return TrueValue, nil
+	}
+	return FalseValue, nil
+}
+
+func builtinIsComplex(args ...Object) (Object, error) {
+	if len(args) != 1 {
+		return nil, ErrWrongNumArguments
+	}
+	if _, ok := args[0].(*Complex); ok {
 		return TrueValue, nil
 	}
 	return FalseValue, nil
@@ -1105,6 +1117,15 @@ func builtinBigFloat(args ...Object) (Object, error) {
 		return &BigFloat{Value: bf}, nil
 	}	
 	return NullValue, nil
+}
+
+func builtinComplex(args ...Object) (Object, error) {
+	if len(args) != 2 {
+		return nil, ErrWrongNumArguments
+	}
+	i1, _ := ToFloat64(args[0])
+	i2, _ := ToFloat64(args[1])
+	return &Complex{Value: complex(i1, i2)}, nil
 }
 
 func builtinBool(args ...Object) (Object, error) {

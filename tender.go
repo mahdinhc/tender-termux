@@ -352,7 +352,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 
 	case *String:
 		builder.WriteString("\033[0;32m" + obj.String() + "\033[0m")	
-	case *Int, *Float, *Time, *BigInt, *BigFloat:
+	case *Int, *Float, *Time, *BigInt, *BigFloat, *Complex:
 		builder.WriteString("\033[0;33m" + obj.String() + "\033[0m")
 	case *Char:
 		builder.WriteString("\033[0;33m'" + obj.String() + "'\033[0m")

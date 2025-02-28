@@ -2,7 +2,7 @@ import "io"
 import "os"
 
 
-reader := os.stdin
+reader := os.stdin()
 io.read_full(reader, "\n")
 
 println("done")

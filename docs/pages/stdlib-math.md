@@ -1,4 +1,4 @@
-# math Module
+# Stdlib math
 
 The `math` module provides mathematical functions and constants for performing various calculations.
 

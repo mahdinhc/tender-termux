@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"math/big"
+	"math/cmplx"
 
 	"github.com/2dprototype/tender/parser"
 	"github.com/2dprototype/tender/token"
@@ -1034,6 +1035,8 @@ func (o *Float) BinaryOp(op token.Token, rhs Object) (Object, error) {
 			return binaryOpBigInt(op, bi, rhs.Value), nil
 		case *BigFloat:
 			return binaryOpBigFloat(op, new(big.Float).SetFloat64(o.Value), rhs.Value), nil
+		case *Complex:
+			return binaryOpComplex(op, complex(o.Value, 0), rhs.Value), nil
 	}
 	return nil, ErrInvalidOperator
 }
@@ -1234,6 +1237,8 @@ func (o *Int) BinaryOp(op token.Token, rhs Object) (Object, error) {
 			return binaryOpBigInt(op, new(big.Int).SetInt64(o.Value), rhs.Value), nil
 		case *BigFloat:
 			return binaryOpBigFloat(op, new(big.Float).SetInt64(o.Value), rhs.Value), nil
+		case *Complex:
+			return binaryOpComplex(op, complex(float64(o.Value), 0), rhs.Value), nil
 	}
 	return nil, ErrInvalidOperator
 }
@@ -1478,6 +1483,97 @@ func (b *BigFloat) Equals(x Object) bool {
     }
     return b.Value.Cmp(t.Value) == 0
 }
+
+// Complex represents a complex number
+type Complex struct {
+	ObjectImpl
+	Value complex128
+}
+
+// String returns the string representation of the Complex number.
+func (c *Complex) String() string {
+	if cmplx.IsNaN(c.Value) {
+		return "NaN"
+	} else if cmplx.IsInf(c.Value) {
+		return "Inf"
+	}
+	if imag(c.Value) < 0 {
+		return fmt.Sprintf("%g%gi", real(c.Value), imag(c.Value))
+	}
+	return fmt.Sprintf("%g+%gi", real(c.Value), imag(c.Value))
+}
+
+
+// IndexGet returns a character at a given index.
+func (c *Complex) IndexGet(index Object) (res Object, err error) {
+	strIdx, ok := index.(*String) 
+	if ok {
+		if strIdx.Value == "real" {
+			return &Float{Value: real(c.Value)}, nil
+		} else if strIdx.Value == "imag" {
+			return &Float{Value: imag(c.Value)}, nil
+		}
+		return nil, nil
+	}
+	return nil, nil
+}
+
+// TypeName returns the name of the type.
+func (c *Complex) TypeName() string {
+	return "complex"
+}
+
+// BinaryOp performs binary operations with another Object.
+func (c *Complex) BinaryOp(op token.Token, rhs Object) (Object, error) {
+	switch rhs := rhs.(type) {
+	case *Complex:
+		return binaryOpComplex(op, c.Value, rhs.Value), nil
+	case *Float:
+		return binaryOpComplex(op, c.Value, complex(rhs.Value, 0)), nil
+	case *Int:
+		return binaryOpComplex(op, c.Value, complex(float64(rhs.Value), 0)), nil
+	}
+	return nil, ErrInvalidOperator
+}
+
+// binaryOpComplex handles binary operations for Complex numbers.
+func binaryOpComplex(op token.Token, lhs, rhs complex128) Object {
+	switch op {
+	case token.Add:
+		return &Complex{Value: lhs + rhs}
+	case token.Sub:
+		return &Complex{Value: lhs - rhs}
+	case token.Mul:
+		return &Complex{Value: lhs * rhs}
+	case token.Quo:
+		if rhs == 0 {
+			// return &Complex{Value: cmplx.Inf()}
+			return &Complex{Value: lhs / rhs}
+		}
+		return &Complex{Value: lhs / rhs}
+	}
+	return nil
+} 
+
+// Copy returns a copy of the Complex number.
+func (c *Complex) Copy() Object {
+	return &Complex{Value: c.Value}
+}
+
+// IsFalsy returns true if the Complex number is zero.
+func (c *Complex) IsFalsy() bool {
+	return c.Value == 0
+}
+
+// Equals checks if the Complex number is equal to another Object.
+func (c *Complex) Equals(x Object) bool {
+	t, ok := x.(*Complex)
+	if !ok {
+		return false
+	}
+	return c.Value == t.Value
+}
+
 
 
 // Map represents a map of objects.

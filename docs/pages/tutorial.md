@@ -15,6 +15,7 @@ age := 30          // Integer variable
 pi := 3.14         // Floating-point variable  
 is_admin := false  // Boolean variable
 var year = bigint(2024) //bigint datatype
+var c = complex(pi, age) //complex datatype
 ```
 
 
@@ -33,16 +34,17 @@ println(age)    // Output: Thirty
 
 Tender supports several primitive data types:
 
-| **Type**     | **Example**              | **Description**                    |
-|--------------|--------------------------|------------------------------------|
-| string       | `"Hello"`                | Sequence of characters.            |
-| int          | `42`                     | Whole numbers.                     |
-| float        | `-19.84`                 | Numbers with decimal points.       |
-| bool         | `true` / `false`         | Logical values.                    |
-| char         | `'A'`                    | Single character.                  |
-| time         | `time()`                 | time (`time.Time` in Go)           |
-| bigint       | `bigint(42)`             | Arbitrary-precision integer.       |
-| bigfloat     | `bigfloat(1000.11)`      | Arbitrary-precision float.         |
+| **Type**     | **Example**              | **Description**                     |
+|--------------|--------------------------|-------------------------------------|
+| string       | `"Hello"`                | Sequence of characters.             |
+| int          | `42`                     | Whole numbers.                      |
+| float        | `-19.84`                 | Numbers with decimal points.        |
+| bool         | `true` / `false`         | Logical values.                     |
+| char         | `'A'`                    | Single character.                   |
+| time         | `time()`                 | time (`time.Time` in Go)            |
+| bigint       | `bigint(42)`             | Arbitrary-precision integer.        |
+| bigfloat     | `bigfloat(1000.11)`      | Arbitrary-precision float.          |
+| complex      | `complex(1, 2)`          | Complex number (`complex128` in go).|
 
 ---
 

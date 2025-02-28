@@ -1,10 +1,11 @@
-# Tender Runtime Types
+# Runtime Types
 
 - **Int**: signed 64bit integer
 - **BigInt**: arbitrary-precision integer (big integer)
 - **String**: string
 - **Float**: 64bit floating point
 - **BigFloat**: arbitrary-precision floating point (big float)
+- **Complex**: complex numbers (`complex128` in go)
 - **Bool**: boolean
 - **Char**: character (`rune` in Go)
 - **Bytes**: byte array (`[]byte` in Go)
@@ -79,6 +80,7 @@ should evaluate to `false` (e.g. for condition expression of `if` statement).
 - `is_bool(x)`: returns `true` if `x` is bool; `false` otherwise
 - `is_float(x)`: returns `true` if `x` is float; `false` otherwise
 - `is_bigfloat(x)`: returns `true` if `x` is bigfloat; `false` otherwise
+- `is_complex(x)`: returns `true` if `x` is complex; `false` otherwise
 - `is_char(x)`: returns `true` if `x` is char; `false` otherwise
 - `is_bytes(x)`: returns `true` if `x` is bytes; `false` otherwise
 - `is_array(x)`: return `true` if `x` is array; `false` otherwise

@@ -1,4 +1,4 @@
-# Builtin Functions Documentation
+# Builtins
 
 ## debug
 
