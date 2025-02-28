@@ -16,6 +16,7 @@ Tender compiles into bytecode and executes on a stack-based virtual machine (VM)
 ### Supported Standard Library
 
 - [math](docs/pages/stdlib-math.md): Mathematical constants and functions  
+- [cmplx](pages/stdlib-cmplx.md): Functions for complex numbers
 - [os](docs/pages/stdlib-os.md): Platform-independent interface to OS functionality  
 - [strings](docs/pages/stdlib-strings.md): String conversion, manipulation, and regular expressions  
 - [times](docs/pages/stdlib-times.md): Time-related functions  
@@ -85,7 +86,7 @@ tender hello.td
 2. Run the following command to install:
 
 ```bash
-go install github.com/2dprototype/tender/cmd/tender@latest
+go install github.com/2dprototype/tender/cli@latest
 ```
 
 ### Manual Installation (Windows)
