@@ -6,10 +6,10 @@ var bf1 = bigfloat(1000000000000000000000000000000000000000000000000000.001)
 var bf2 = bigfloat("1000000000000000000000000000000000000000000000000000.001")
 var bf3 = 1000e1000
 
-println(bi1)
-println(bi2)
-println(bi3)
+println(typeof(bi1), bi1)
+println(typeof(bi2), bi2)
+println(typeof(bi3), bi3)
 
-println(bf1)
-println(bf2)
-println(bf3)
+println(typeof(bf1), bf1)
+println(typeof(bf2), bf2)
+println(typeof(bf3), bf3)

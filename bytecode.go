@@ -120,6 +120,7 @@ func (b *Bytecode) RemoveDuplicates() {
 	strings := make(map[string]int)
 	floats := make(map[float64]int)
 	bigfloats := make(map[*big.Float]int)
+	complexs := make(map[complex128]int)
 	chars := make(map[rune]int)
 	immutableMaps := make(map[string]int) // for modules
 
@@ -187,6 +188,15 @@ func (b *Bytecode) RemoveDuplicates() {
 			} else {
 				newIdx = len(deduped)
 				bigfloats[c.Value] = newIdx
+				indexMap[curIdx] = newIdx
+				deduped = append(deduped, c)
+			}	
+		case *Complex:
+			if newIdx, ok := complexs[c.Value]; ok {
+				indexMap[curIdx] = newIdx
+			} else {
+				newIdx = len(deduped)
+				complexs[c.Value] = newIdx
 				indexMap[curIdx] = newIdx
 				deduped = append(deduped, c)
 			}

@@ -1,7 +1,7 @@
 import "http"
 
 // GET request
-response := http.get("https://example.com")
+response := http.get("https://example.com").body()
 if !is_error(response) {
     println(string(response))
 } 

@@ -24,7 +24,7 @@ func makeOSFile(file *os.File) *tender.ImmutableMap {
 					if len(args) != 0 {
 						return nil, tender.ErrWrongNumArguments
 					}
-					return &IOWriter{Value:file}, nil
+					return &IOReader{Value:file}, nil
 				},
 			},
 			"chdir": &tender.UserFunction{

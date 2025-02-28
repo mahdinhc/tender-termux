@@ -37,7 +37,7 @@ var osModule = map[string]tender.Object{
 			if len(args) != 0 {
 				return nil, tender.ErrWrongNumArguments
 			}
-			return &IOWriter{Value: os.Stdin}, nil
+			return &IOReader{Value: os.Stdin}, nil
 		},
 	},
 	"platform":            &tender.String{Value: runtime.GOOS},

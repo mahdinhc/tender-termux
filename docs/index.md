@@ -86,7 +86,7 @@ tender hello.td
 2. Run the following command to install:
 
 ```bash
-go install github.com/2dprototype/tender/cli@latest
+go install github.com/2dprototype/tender/cli/tender@latest
 ```
 
 ### Manual Installation (Windows)

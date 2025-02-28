@@ -433,8 +433,7 @@ func (p *Parser) parseOperand() Expr {
 			v, err := strconv.ParseFloat(strings.TrimSuffix(p.tokenLit, "i"), 64)
 			if err == strconv.ErrRange {
 				p.error(p.pos, "invalid complex number")
-			} 
-			fmt.Println(v, p.tokenLit)
+			}
 			x := &ComplexLit{
 				Value:    complex(0, v),
 				ValuePos: p.pos,
