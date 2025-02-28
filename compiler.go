@@ -202,6 +202,8 @@ func (c *Compiler) Compile(node parser.Node) error {
 		c.emit(node, parser.OpConstant, c.addConstant(&BigInt{Value: node.Value}))
 	case *parser.BigFloatLit:
 		c.emit(node, parser.OpConstant, c.addConstant(&BigFloat{Value: node.Value}))
+	case *parser.ComplexLit:
+		c.emit(node, parser.OpConstant, c.addConstant(&Complex{Value: node.Value}))
 	case *parser.BoolLit:
 		if node.Value {
 			c.emit(node, parser.OpTrue)

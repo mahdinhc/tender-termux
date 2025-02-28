@@ -429,6 +429,19 @@ func (p *Parser) parseOperand() Expr {
 			}
 			p.next()
 			return x
+		case token.Complex:
+			v, err := strconv.ParseFloat(strings.TrimSuffix(p.tokenLit, "i"), 64)
+			if err == strconv.ErrRange {
+				p.error(p.pos, "invalid complex number")
+			} 
+			fmt.Println(v, p.tokenLit)
+			x := &ComplexLit{
+				Value:    complex(0, v),
+				ValuePos: p.pos,
+				Literal:  p.tokenLit,
+			}
+			p.next()
+			return x
 		case token.Char:
 			return p.parseCharLit()
 		case token.String:
@@ -895,7 +908,7 @@ func (p *Parser) parseStmt() (stmt Stmt) {
 			return s
 		case // simple statements
 			token.Error, token.Immutable, token.Ident, token.Int,
-			token.Float, token.Char, token.String, token.True, token.False,
+			token.Float, token.Complex, token.Char, token.String, token.True, token.False,
 			token.Null, token.Embed, token.LParen, token.LBrace,
 			token.LBrack, token.Add, token.Sub, token.Mul, token.And, token.Xor,
 			token.Not:

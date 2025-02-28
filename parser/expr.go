@@ -261,6 +261,29 @@ func (e *BigFloatLit) String() string {
 	return e.Literal
 }
 
+// ComplexLit represents a floating point literal.
+type ComplexLit struct {
+	Value    complex128
+	ValuePos Pos
+	Literal  string
+}
+
+func (e *ComplexLit) exprNode() {}
+
+// Pos returns the position of first character belonging to the node.
+func (e *ComplexLit) Pos() Pos {
+	return e.ValuePos
+}
+
+// End returns the position of first character immediately after the node.
+func (e *ComplexLit) End() Pos {
+	return Pos(int(e.ValuePos) + len(e.Literal))
+}
+
+func (e *ComplexLit) String() string {
+	return e.Literal
+}
+
 // FuncLit represents a function literal.
 type FuncLit struct {
 	Type *FuncType

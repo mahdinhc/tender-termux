@@ -440,6 +440,9 @@ func (s *Scanner) scanNumber() (token.Token, string) {
 		if offs == s.offset {
 			s.error(offs, "exponent has no digits")
 		}
+	} else if s.ch == 'i' {
+		s.next()
+		tok = token.Complex
 	}
 
 	return tok, string(s.src[offs:s.offset])

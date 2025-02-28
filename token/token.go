@@ -16,6 +16,7 @@ const (
 	Ident
 	Int
 	Float
+	Complex
 	Char
 	String
 	_literalEnd
