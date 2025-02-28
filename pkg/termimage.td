@@ -1,5 +1,9 @@
-math := import("math")
-color := import("colors")
+import "color"
+import "math"
+import "canvas"
+import "image"
+
+block := "█"
 
 COLORS := [
 	[000, 000, 000], [255, 000, 000], [000, 255, 000], [255, 255, 000],
@@ -24,7 +28,7 @@ color_distance := fn(color1, color2) {
 }
 
 
-export fn(rgb) {
+fn termcolor(rgb) {
 	// Find the index of the nearest color
 	minDistance := 100000000000000000
 	minIndex := 0;
@@ -39,3 +43,37 @@ export fn(rgb) {
 	}
 	return ANSI_COLORS[minIndex]
 }
+
+to_ascii := fn (img, width, height, colored) {
+	im := image.decode(img)
+
+	w := im.bounds().size.width
+	h := im.bounds().size.height
+
+	ctx := canvas.new_context(width, height)
+	ctx.scale(float(width)/w, float(height)/h)
+	ctx.drawimage(img, 0, 0)
+	img := ctx.image()
+	
+	result := ""
+	for j := 0; j < height; j++ {
+		str := ""
+		for i := 0; i < width; i++ {
+			rgb := img.at(i, j)
+			if colored {
+				str += termcolor(rgb)
+			}
+			str += block
+		} 
+		result += str + "\n" 
+	}
+	
+	return result + color.reset
+}
+
+export {
+	to_ascii : to_ascii,
+	set_block : fn(b) {
+		block = b
+	}
+}		
