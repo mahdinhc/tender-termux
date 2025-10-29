@@ -33,4 +33,5 @@ var BuiltinModules = map[string]map[string]tender.Object{
 	"websocket":    websocketModule,
 	"gob":          gobModule,
 	"csv":          csvModule,
+	"xml":          xmlModule,
 }

@@ -256,7 +256,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 					return nil, nil
 				},
 			},	
-			"rounderect": &tender.UserFunction{
+			"roundrect": &tender.UserFunction{
 				Value: FuncAFFFFFR(ctx.DrawRoundedRectangle),
 			},
 			"circle": &tender.UserFunction{
