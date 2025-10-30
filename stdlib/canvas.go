@@ -4,24 +4,12 @@ import (
 	"github.com/2dprototype/tender"
 	"bytes"
 	"image"
-	"image/draw"
 	_ "image/jpeg"
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/tiff"
 	_ "golang.org/x/image/webp"
 	_ "image/png"
 	"github.com/2dprototype/tender/v/gg"
-	
-	// "golang.org/x/mobile/event/lifecycle"
-	// "golang.org/x/exp/shiny/driver"
-	// "golang.org/x/exp/shiny/screen"
-	// "github.com/oakmound/shiny/driver"
-	// "golang.org/x/exp/shiny/driver/gldriver"
-	"github.com/oakmound/shiny/driver"
-	"github.com/oakmound/shiny/screen"
-	// "golang.org/x/mobile/event/lifecycle"
-	
-	// "fmt"
 )
 
 var canvasModule = map[string]tender.Object{
@@ -29,158 +17,7 @@ var canvasModule = map[string]tender.Object{
 	"load_image": &tender.UserFunction{Name:  "load_image", Value: imageLoad},	
 	"radians": &tender.UserFunction{Name: "radians", Value: FuncAFRF(gg.Radians)},
 	"degrees": &tender.UserFunction{Name: "degrees", Value: FuncAFRF(gg.Degrees)},
-	"new_window" : &tender.BuiltinFunction{
-		Name: "new_window",
-		NeedVMObj: true,
-		Value: canvasNewWindow,
-	},	
 }
-
-
-
-func canvasNewWindow(args ...tender.Object) (ret tender.Object, err error) {
-	vm := args[0].(*tender.VMObj).Value
-	args = args[1:] // the first arg is VMObj inserted by VM
-	if !(len(args) == 4 || len(args) == 2) {
-		return nil, tender.ErrWrongNumArguments
-	}
-	
-	var wOpts screen.WindowGenerator
-	
-	if len(args) == 4 {
-		width, _ := tender.ToInt(args[0])
-		height, _ := tender.ToInt(args[1])
-		title, _ := tender.ToString(args[2])
-		wOpts = screen.WindowGenerator{
-			Title:  title,
-			Width:  width,
-			Height: height,
-		}
-	} else {
-		var width int = 400
-		var height int = 400
-		var title = ""
-		var fullscreen = false
-		var borderless = false
-		var topMost = false
-		var noScaling = false
-		var x int32
-		var y int32
-		
-		m, ok := args[0].(*tender.Map)
-		if !ok {
-			return nil, nil
-		}
-		if val, ok := m.Value["width"]; ok {
-			width, _ = tender.ToInt(val)
-		}
-		if val, ok := m.Value["height"]; ok {
-			height, _ = tender.ToInt(val)
-		}	
-		if val, ok := m.Value["title"]; ok {
-			title, _ = tender.ToString(val)
-		}		
-		if val, ok := m.Value["fullscreen"]; ok {
-			fullscreen, _ = tender.ToBool(val)
-		}	
-		if val, ok := m.Value["borderless"]; ok {
-			borderless, _ = tender.ToBool(val)
-		}	
-		if val, ok := m.Value["top_most"]; ok {
-			topMost, _ = tender.ToBool(val)
-		}
-		if val, ok := m.Value["no_scaling"]; ok {
-			noScaling, _ = tender.ToBool(val)
-		}
-		if val, ok := m.Value["x"]; ok {
-			x, _ = tender.ToInt32(val)
-		}	
-		if val, ok := m.Value["y"]; ok {
-			y, _ = tender.ToInt32(val)
-		}
-		wOpts = screen.WindowGenerator{
-			Title:  title,
-			Width:  width,
-			Height: height,
-			Fullscreen: fullscreen,
-			Borderless: borderless,
-			TopMost: topMost,
-			NoScaling: noScaling,
-			X: x,
-			Y: y,
-		}
-	}
-	// Use the Go exp/shiny package to create a window
-	driver.Main(func(s screen.Screen) {
-		w, err := s.NewWindow(wOpts)
-		
-		if err != nil {
-			return
-		}
-		
-		var ctx *gg.Context
-		
-		wmap := &tender.ImmutableMap{
-			Value: map[string]tender.Object{
-				"release": &tender.UserFunction{Value: FuncAR(w.Release)},
-				// "wooh": &tender.UserFunction{
-					// Value: func(args ...tender.Object) (tender.Object, error) {
-						// screen.Title("My Shiny Window")
-						// return nil, nil
-					// },
-				// },		
-				"new_context": &tender.UserFunction{
-					Value: func(args ...tender.Object) (tender.Object, error) {
-						if len(args) != 2 {
-							return nil, tender.ErrWrongNumArguments
-						}
-						ww, _ := tender.ToInt(args[0])
-						hh, _ := tender.ToInt(args[1])
-						ctx = gg.NewContext(ww, hh)
-						return makeGGContext(ctx), nil
-					},
-				},	
-				"update": &tender.UserFunction{
-					Value: func(args ...tender.Object) (tender.Object, error) {
-						if len(args) != 2 {
-							return nil, tender.ErrWrongNumArguments
-						}
-						ww, _ := tender.ToInt(args[0])
-						hh, _ := tender.ToInt(args[1])
-						screenImage, err := s.NewImage(image.Point{X: ww, Y: hh})
-						if err != nil {
-							return wrapError(err), nil
-						}
-						defer screenImage.Release()
-						draw.Draw(screenImage.RGBA(), screenImage.Bounds(), ctx.Image().(*image.RGBA), image.Point{}, draw.Over)
-						w.Upload(image.Point{0, 0}, screenImage, screenImage.Bounds())
-						w.Publish()
-						return nil, nil
-					},
-				},	
-				"next_event": &tender.UserFunction{
-					Value: func(args ...tender.Object) (tender.Object, error) {
-						if len(args) != 0 {
-							return nil, tender.ErrWrongNumArguments
-						}
-						return eventToObject(w.NextEvent()), nil
-					},
-				},
-			},
-		}
-		
-		defer w.Release()
-		
-		if len(args) == 4 {
-			tender.WrapFuncCall(vm, args[3], wmap)
-		} else {
-			tender.WrapFuncCall(vm, args[1], wmap)	
-		}
-	})
-	
-	return nil, nil
-}
-
 
 
 func ggNewContext(args ...tender.Object) (ret tender.Object, err error) {
