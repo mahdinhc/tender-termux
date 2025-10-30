@@ -35,7 +35,6 @@ Tender compiles into bytecode and executes on a stack-based virtual machine (VM)
 - [path](pages/stdlib-path.md): File path manipulation  
 - [image](pages/stdlib-image.md): Image manipulation  
 - [canvas](pages/stdlib-canvas.md): Drawing functions for canvases  
-- [dll](pages/stdlib-dll.md): Dynamic link library interactions  
 - [io](pages/stdlib-io.md): Input and output functions  
 - [audio](pages/stdlib-audio.md): Audio processing  
 - [net](pages/stdlib-net.md): Networking functions  
@@ -87,10 +86,10 @@ tender hello.td
 2. Run the following command to install:
 
 ```bash
-go install github.com/2dprototype/tender/cli/tender@latest
+go install github.com/mahdinhc/tender-termux/cli/tender@latest
 ```
 
-### Manual Installation (Windows)
+### Manual Installation (Android Termux)
 
 Precompiled binaries are available. Download them from the release tags.
 
@@ -118,12 +117,6 @@ Tender uses the following dependencies:
 - [ebitengine/oto/v3](https://github.com/ebitengine/oto/v3)  
 - [exp/shiny](https://pkg.go.dev/golang.org/x/exp/shiny)  
 - [fogleman/gg](https://github.com/fogleman/gg)  
-
----
-
-## Syntax Highlighting
-
-Syntax highlighting is currently available only for **Notepad++**. Download the configuration file [here](https://github.com/2dprototype/tender/blob/main/misc/syntax/npp_tender.xml).
 
 ---
 
