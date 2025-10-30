@@ -1,4 +1,3 @@
-
 package stdlib
 
 import (
@@ -7,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 
 	"github.com/2dprototype/tender"
 )
@@ -42,7 +42,13 @@ func rsaGenerateKey(args ...tender.Object) (ret tender.Object, err error) {
 		return wrapError(err), nil
 	}
 
-	return &tender.Bytes{Value: x509.MarshalPKCS1PrivateKey(key)}, nil
+	// Return both private and public key as a map
+	keyPair := map[string]tender.Object{
+		"private": &tender.Bytes{Value: x509.MarshalPKCS1PrivateKey(key)},
+		"public":  &tender.Bytes{Value: x509.MarshalPKCS1PublicKey(&key.PublicKey)},
+	}
+
+	return &tender.Map{Value: keyPair}, nil
 }
 
 func rsaEncrypt(args ...tender.Object) (ret tender.Object, err error) {
@@ -53,14 +59,35 @@ func rsaEncrypt(args ...tender.Object) (ret tender.Object, err error) {
 	data, _ := tender.ToByteSlice(args[0])
 	publicKeyBytes, _ := tender.ToByteSlice(args[1])
 
+	// Try to parse as PKCS1 public key first
 	publicKey, err := x509.ParsePKCS1PublicKey(publicKeyBytes)
 	if err != nil {
 		// Try parsing as PKIX format
 		pubInterface, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 		if err != nil {
-			return wrapError(err), nil
+			// Try parsing as PEM
+			block, _ := pem.Decode(publicKeyBytes)
+			if block != nil {
+				if block.Type == "PUBLIC KEY" {
+					pubInterface, err = x509.ParsePKIXPublicKey(block.Bytes)
+					if err != nil {
+						return wrapError(err), nil
+					}
+				} else if block.Type == "RSA PUBLIC KEY" {
+					publicKey, err = x509.ParsePKCS1PublicKey(block.Bytes)
+					if err != nil {
+						return wrapError(err), nil
+					}
+				} else {
+					return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+				}
+			} else {
+				return wrapError(err), nil
+			}
 		}
-		publicKey = pubInterface.(*rsa.PublicKey)
+		if publicKey == nil {
+			publicKey = pubInterface.(*rsa.PublicKey)
+		}
 	}
 
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, data, nil)
@@ -79,9 +106,29 @@ func rsaDecrypt(args ...tender.Object) (ret tender.Object, err error) {
 	ciphertext, _ := tender.ToByteSlice(args[0])
 	privateKeyBytes, _ := tender.ToByteSlice(args[1])
 
+	// Try to parse as PKCS1 private key first
 	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
 	if err != nil {
-		return wrapError(err), nil
+		// Try parsing as PEM
+		block, _ := pem.Decode(privateKeyBytes)
+		if block != nil {
+			if block.Type == "RSA PRIVATE KEY" {
+				privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+			} else if block.Type == "PRIVATE KEY" {
+				privInterface, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+				privateKey = privInterface.(*rsa.PrivateKey)
+			} else {
+				return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+			}
+		} else {
+			return wrapError(err), nil
+		}
 	}
 
 	plaintext, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, privateKey, ciphertext, nil)
@@ -102,7 +149,26 @@ func rsaSign(args ...tender.Object) (ret tender.Object, err error) {
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
 	if err != nil {
-		return wrapError(err), nil
+		// Try parsing as PEM
+		block, _ := pem.Decode(privateKeyBytes)
+		if block != nil {
+			if block.Type == "RSA PRIVATE KEY" {
+				privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+			} else if block.Type == "PRIVATE KEY" {
+				privInterface, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+				privateKey = privInterface.(*rsa.PrivateKey)
+			} else {
+				return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+			}
+		} else {
+			return wrapError(err), nil
+		}
 	}
 
 	hashed := sha256.Sum256(data)
@@ -125,11 +191,32 @@ func rsaVerify(args ...tender.Object) (ret tender.Object, err error) {
 
 	publicKey, err := x509.ParsePKCS1PublicKey(publicKeyBytes)
 	if err != nil {
+		// Try parsing as PKIX format
 		pubInterface, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 		if err != nil {
-			return wrapError(err), nil
+			// Try parsing as PEM
+			block, _ := pem.Decode(publicKeyBytes)
+			if block != nil {
+				if block.Type == "PUBLIC KEY" {
+					pubInterface, err = x509.ParsePKIXPublicKey(block.Bytes)
+					if err != nil {
+						return wrapError(err), nil
+					}
+				} else if block.Type == "RSA PUBLIC KEY" {
+					publicKey, err = x509.ParsePKCS1PublicKey(block.Bytes)
+					if err != nil {
+						return wrapError(err), nil
+					}
+				} else {
+					return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+				}
+			} else {
+				return wrapError(err), nil
+			}
 		}
-		publicKey = pubInterface.(*rsa.PublicKey)
+		if publicKey == nil {
+			publicKey = pubInterface.(*rsa.PublicKey)
+		}
 	}
 
 	hashed := sha256.Sum256(data)
@@ -168,25 +255,22 @@ func rsaExportKey(args ...tender.Object) (ret tender.Object, err error) {
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		}
 	case "public":
+		// Try to parse as PKCS1 public key
 		publicKey, err := x509.ParsePKCS1PublicKey(keyBytes)
 		if err != nil {
-			pubInterface, err := x509.ParsePKIXPublicKey(keyBytes)
+			// If it's a private key, extract public key from it
+			privateKey, err := x509.ParsePKCS1PrivateKey(keyBytes)
 			if err != nil {
-				return wrapError(err), nil
+				return wrapError(errors.New("cannot parse as public key or extract from private key")), nil
 			}
-			publicKey = pubInterface.(*rsa.PublicKey)
-		}
-		publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
-		if err != nil {
-			return wrapError(err), nil
+			publicKey = &privateKey.PublicKey
 		}
 		pemBlock = &pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: publicKeyBytes,
+			Type:  "RSA PUBLIC KEY",
+			Bytes: x509.MarshalPKCS1PublicKey(publicKey),
 		}
 	default:
-		// return &tender.Error{Value: &tender.String{Value: "keyType must be 'private' or 'public'"}}, nil
-		return nil, nil
+		return wrapError(errors.New("keyType must be 'private' or 'public'")), nil
 	}
 
 	pemData := pem.EncodeToMemory(pemBlock)
@@ -210,37 +294,32 @@ func rsaImportKey(args ...tender.Object) (ret tender.Object, err error) {
 
 	pemBlock, _ := pem.Decode(pemData)
 	if pemBlock == nil {
-		// return nil, &tender.Error{Value: &tender.String{Value: "invalid PEM data"}}
-		return nil, nil
+		return wrapError(errors.New("invalid PEM data")), nil
 	}
 
 	switch keyType {
 	case "private":
 		privateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
 		if err != nil {
-			return wrapError(err), nil
+			// Try PKCS8
+			privInterface, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			privateKey = privInterface.(*rsa.PrivateKey)
 		}
 		return &tender.Bytes{Value: x509.MarshalPKCS1PrivateKey(privateKey)}, nil
 	case "public":
-		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+		publicKey, err := x509.ParsePKCS1PublicKey(pemBlock.Bytes)
 		if err != nil {
-			publicKey, err := x509.ParsePKCS1PublicKey(pemBlock.Bytes)
+			pubInterface, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
 			if err != nil {
 				return wrapError(err), nil
 			}
-			publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
-			if err != nil {
-				return wrapError(err), nil
-			}
-			return &tender.Bytes{Value: publicKeyBytes}, nil
+			publicKey = pubInterface.(*rsa.PublicKey)
 		}
-		publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
-		if err != nil {
-			return wrapError(err), nil
-		}
-		return &tender.Bytes{Value: publicKeyBytes}, nil
+		return &tender.Bytes{Value: x509.MarshalPKCS1PublicKey(publicKey)}, nil
 	default:
-		// return nil, &tender.Error{Value: &tender.String{Value: "keyType must be 'private' or 'public'"}}
-		return nil, nil
+		return wrapError(errors.New("keyType must be 'private' or 'public'")), nil
 	}
 }

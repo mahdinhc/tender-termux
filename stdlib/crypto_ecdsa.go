@@ -1,4 +1,3 @@
-
 package stdlib
 
 import (
@@ -8,8 +7,8 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"math/big"
-	"encoding/asn1"
 
 	"github.com/2dprototype/tender"
 )
@@ -49,8 +48,7 @@ func ecdsaGenerateKey(args ...tender.Object) (ret tender.Object, err error) {
 	case "p521":
 		curve = elliptic.P521()
 	default:
-		// return nil, &tender.Error{Value: &tender.String{Value: "unsupported curve: " + curveName}}
-		return nil, nil
+		return wrapError(errors.New("unsupported curve: " + curveName)), nil
 	}
 
 	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
@@ -58,12 +56,23 @@ func ecdsaGenerateKey(args ...tender.Object) (ret tender.Object, err error) {
 		return wrapError(err), nil
 	}
 
+	// Return both private and public key as a map
 	privateKeyBytes, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
 		return wrapError(err), nil
 	}
 
-	return &tender.Bytes{Value: privateKeyBytes}, nil
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return wrapError(err), nil
+	}
+
+	keyPair := map[string]tender.Object{
+		"private": &tender.Bytes{Value: privateKeyBytes},
+		"public":  &tender.Bytes{Value: publicKeyBytes},
+	}
+
+	return &tender.Map{Value: keyPair}, nil
 }
 
 func ecdsaSign(args ...tender.Object) (ret tender.Object, err error) {
@@ -76,7 +85,20 @@ func ecdsaSign(args ...tender.Object) (ret tender.Object, err error) {
 
 	privateKey, err := x509.ParseECPrivateKey(privateKeyBytes)
 	if err != nil {
-		return wrapError(err), nil
+		// Try parsing as PEM
+		block, _ := pem.Decode(privateKeyBytes)
+		if block != nil {
+			if block.Type == "EC PRIVATE KEY" {
+				privateKey, err = x509.ParseECPrivateKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+			} else {
+				return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+			}
+		} else {
+			return wrapError(err), nil
+		}
 	}
 
 	hashed := sha256.Sum256(data)
@@ -85,13 +107,14 @@ func ecdsaSign(args ...tender.Object) (ret tender.Object, err error) {
 		return wrapError(err), nil
 	}
 
-	// Encode signature as ASN.1
-	signature, err := asn1.Marshal(struct {
-		R, S *big.Int
-	}{r, s})
-	if err != nil {
-		return wrapError(err), nil
-	}
+	// Encode signature as simple concatenation of r and s (more reliable than ASN.1)
+	signature := make([]byte, 64) // 32 bytes for r, 32 bytes for s
+	rBytes := r.Bytes()
+	sBytes := s.Bytes()
+	
+	// Copy r and s to fixed-size positions
+	copy(signature[32-len(rBytes):32], rBytes)
+	copy(signature[64-len(sBytes):64], sBytes)
 
 	return &tender.Bytes{Value: signature}, nil
 }
@@ -107,27 +130,42 @@ func ecdsaVerify(args ...tender.Object) (ret tender.Object, err error) {
 
 	publicKey, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 	if err != nil {
-		return wrapError(err), nil
+		// Try parsing as PEM
+		block, _ := pem.Decode(publicKeyBytes)
+		if block != nil {
+			if block.Type == "PUBLIC KEY" {
+				publicKey, err = x509.ParsePKIXPublicKey(block.Bytes)
+				if err != nil {
+					return wrapError(err), nil
+				}
+			} else {
+				return wrapError(errors.New("unsupported PEM type: " + block.Type)), nil
+			}
+		} else {
+			return wrapError(err), nil
+		}
 	}
 
-	ecdsaPublicKey := publicKey.(*ecdsa.PublicKey)
-
-	// Decode ASN.1 signature
-	var sig struct{ R, S *big.Int }
-	_, err = asn1.Unmarshal(signature, &sig)
-	if err != nil {
-		return wrapError(err), nil
+	ecdsaPublicKey, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return wrapError(errors.New("not an ECDSA public key")), nil
 	}
+
+	// Parse signature as simple concatenation (64 bytes total)
+	if len(signature) != 64 {
+		return wrapError(errors.New("signature must be 64 bytes")), nil
+	}
+
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:])
 
 	hashed := sha256.Sum256(data)
-	valid := ecdsa.Verify(ecdsaPublicKey, hashed[:], sig.R, sig.S)
-
+	valid := ecdsa.Verify(ecdsaPublicKey, hashed[:], r, s)
 	if valid {
-		return tender.TrueValue,  nil
+		return tender.TrueValue, nil
 	} else {
-		return tender.FalseValue,  nil
+		return tender.FalseValue, nil
 	}
-	// return &tender.Bool{Value: valid}, nil
 }
 
 func ecdsaExportKey(args ...tender.Object) (ret tender.Object, err error) {
@@ -161,21 +199,34 @@ func ecdsaExportKey(args ...tender.Object) (ret tender.Object, err error) {
 			Bytes: privateKeyBytes,
 		}
 	case "public":
-		publicKey, err := x509.ParsePKIXPublicKey(keyBytes)
-		if err != nil {
-			return wrapError(err), nil
-		}
-		publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
-		if err != nil {
-			return wrapError(err), nil
-		}
-		pemBlock = &pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: publicKeyBytes,
+		// If we have private key bytes, extract public key from it
+		privateKey, err := x509.ParseECPrivateKey(keyBytes)
+		if err == nil {
+			publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			pemBlock = &pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: publicKeyBytes,
+			}
+		} else {
+			// Try to parse as public key directly
+			publicKey, err := x509.ParsePKIXPublicKey(keyBytes)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+			if err != nil {
+				return wrapError(err), nil
+			}
+			pemBlock = &pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: publicKeyBytes,
+			}
 		}
 	default:
-		// return nil, &tender.Error{Value: &tender.String{Value: "keyType must be 'private' or 'public'"}}
-		return nil, nil
+		return wrapError(errors.New("keyType must be 'private' or 'public'")), nil
 	}
 
 	pemData := pem.EncodeToMemory(pemBlock)
@@ -199,8 +250,7 @@ func ecdsaImportKey(args ...tender.Object) (ret tender.Object, err error) {
 
 	pemBlock, _ := pem.Decode(pemData)
 	if pemBlock == nil {
-		// return nil, &tender.Error{Value: &tender.String{Value: "invalid PEM data"}}
-		return nil, nil
+		return wrapError(errors.New("invalid PEM data")), nil
 	}
 
 	switch keyType {
@@ -225,17 +275,6 @@ func ecdsaImportKey(args ...tender.Object) (ret tender.Object, err error) {
 		}
 		return &tender.Bytes{Value: publicKeyBytes}, nil
 	default:
-		// return nil, &tender.Error{Value: &tender.String{Value: "keyType must be 'private' or 'public'"}}
-		return nil, nil
+		return wrapError(errors.New("keyType must be 'private' or 'public'")), nil
 	}
-}
-
-// Helper function for ASN.1 marshaling
-func asn1Marshal(value interface{}) ([]byte, error) {
-	return asn1.Marshal(value)
-}
-
-// Helper function for ASN.1 unmarshaling  
-func asn1Unmarshal(b []byte, value interface{}) ([]byte, error) {
-	return asn1.Unmarshal(b, value)
 }

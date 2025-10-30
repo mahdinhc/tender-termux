@@ -158,10 +158,88 @@ func makeImageFilters(img image.Image) *tender.ImmutableMap {
 					return makeImage(newImg), nil
 				},
 			},
-		},
-	}
+            // New filters
+            "hue": &tender.UserFunction{
+                Name: "hue",
+                Value: func(args ...tender.Object) (tender.Object, error) {
+                    if len(args) != 1 {
+                        return nil, tender.ErrWrongNumArguments
+                    }
+                    hue, ok := tender.ToFloat64(args[0])
+                    if !ok {
+                        return nil, tender.ErrInvalidArgumentType{
+                            Name:     "hue",
+                            Expected: "float",
+                            Found:    args[0].TypeName(),
+                        }
+                    }
+                    return makeImage(applyHueParallel(img, hue)), nil
+                },
+            },
+            
+            "temperature": &tender.UserFunction{
+                Name: "temperature",
+                Value: func(args ...tender.Object) (tender.Object, error) {
+                    if len(args) != 1 {
+                        return nil, tender.ErrWrongNumArguments
+                    }
+                    temp, ok := tender.ToFloat64(args[0])
+                    if !ok {
+                        return nil, tender.ErrInvalidArgumentType{
+                            Name:     "temperature",
+                            Expected: "float",
+                            Found:    args[0].TypeName(),
+                        }
+                    }
+                    return makeImage(applyTemperatureParallel(img, temp)), nil
+                },
+            },
+            
+            "vignette": &tender.UserFunction{
+                Name: "vignette",
+                Value: func(args ...tender.Object) (tender.Object, error) {
+                    if len(args) != 1 {
+                        return nil, tender.ErrWrongNumArguments
+                    }
+                    intensity, ok := tender.ToFloat64(args[0])
+                    if !ok {
+                        return nil, tender.ErrInvalidArgumentType{
+                            Name:     "intensity",
+                            Expected: "float",
+                            Found:    args[0].TypeName(),
+                        }
+                    }
+                    return makeImage(applyVignetteParallel(img, intensity)), nil
+                },
+            },
+            
+            "pixelate": &tender.UserFunction{
+                Name: "pixelate",
+                Value: func(args ...tender.Object) (tender.Object, error) {
+                    if len(args) != 1 {
+                        return nil, tender.ErrWrongNumArguments
+                    }
+                    size, ok := tender.ToInt(args[0])
+                    if !ok {
+                        return nil, tender.ErrInvalidArgumentType{
+                            Name:     "size",
+                            Expected: "int",
+                            Found:    args[0].TypeName(),
+                        }
+                    }
+                    return makeImage(applyPixelateParallel(img, size)), nil
+                },
+            },
+            
+            "sobel": &tender.UserFunction{
+                Name: "sobel",
+                Value: func(args ...tender.Object) (tender.Object, error) {
+                    return makeImage(applySobelEdgeDetection(img)), nil
+                },
+            },
+        },
+    }
 }
-
 // -------------------
 // Filter Implementations
 // -------------------
@@ -545,4 +623,366 @@ func applyConvolutionParallel(img image.Image, kernel [][]float64, divisor, offs
 // clamp ensures value is within min and max.
 func clamp(value, min, max float64) float64 {
 	return math.Max(min, math.Min(max, value))
+}
+
+// New filter implementations
+
+// applyHueParallel adjusts the hue of the image
+func applyHueParallel(img image.Image, hue float64) image.Image {
+    bounds := img.Bounds()
+    out := image.NewRGBA(bounds)
+    numWorkers := runtime.GOMAXPROCS(0)
+    var wg sync.WaitGroup
+    rowHeight := bounds.Dy() / numWorkers
+
+    hueRad := hue * math.Pi / 180
+
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        startY := bounds.Min.Y + i*rowHeight
+        endY := bounds.Min.Y + (i+1)*rowHeight
+        if i == numWorkers-1 {
+            endY = bounds.Max.Y
+        }
+        go func(startY, endY int) {
+            defer wg.Done()
+            for y := startY; y < endY; y++ {
+                for x := bounds.Min.X; x < bounds.Max.X; x++ {
+                    r, g, b, a := img.At(x, y).RGBA()
+                    rf, gf, bf := float64(r>>8), float64(g>>8), float64(b>>8)
+                    
+                    // Convert RGB to HSL
+                    h, s, l := rgbToHsl(rf, gf, bf)
+                    
+                    // Adjust hue
+                    h = math.Mod(h+hueRad, 2*math.Pi)
+                    if h < 0 {
+                        h += 2 * math.Pi
+                    }
+                    
+                    // Convert back to RGB
+                    rf, gf, bf = hslToRgb(h, s, l)
+                    
+                    out.Set(x, y, color.RGBA{
+                        uint8(clamp(rf, 0, 255)),
+                        uint8(clamp(gf, 0, 255)),
+                        uint8(clamp(bf, 0, 255)),
+                        uint8(a >> 8),
+                    })
+                }
+            }
+        }(startY, endY)
+    }
+    wg.Wait()
+    return out
+}
+
+// applyTemperatureParallel adjusts color temperature
+func applyTemperatureParallel(img image.Image, temp float64) image.Image {
+    bounds := img.Bounds()
+    out := image.NewRGBA(bounds)
+    numWorkers := runtime.GOMAXPROCS(0)
+    var wg sync.WaitGroup
+    rowHeight := bounds.Dy() / numWorkers
+
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        startY := bounds.Min.Y + i*rowHeight
+        endY := bounds.Min.Y + (i+1)*rowHeight
+        if i == numWorkers-1 {
+            endY = bounds.Max.Y
+        }
+        go func(startY, endY int) {
+            defer wg.Done()
+            for y := startY; y < endY; y++ {
+                for x := bounds.Min.X; x < bounds.Max.X; x++ {
+                    r, g, b, a := img.At(x, y).RGBA()
+                    rf, gf, bf := float64(r>>8), float64(g>>8), float64(b>>8)
+                    
+                    // Adjust temperature (warm/cool)
+                    if temp > 0 {
+                        // Warm - increase red, decrease blue
+                        rf += temp * 0.5
+                        bf -= temp * 0.3
+                    } else {
+                        // Cool - decrease red, increase blue
+                        rf += temp * 0.5
+                        bf -= temp * 0.3
+                    }
+                    
+                    out.Set(x, y, color.RGBA{
+                        uint8(clamp(rf, 0, 255)),
+                        uint8(clamp(gf, 0, 255)),
+                        uint8(clamp(bf, 0, 255)),
+                        uint8(a >> 8),
+                    })
+                }
+            }
+        }(startY, endY)
+    }
+    wg.Wait()
+    return out
+}
+
+// applyVignetteParallel applies vignette effect
+func applyVignetteParallel(img image.Image, intensity float64) image.Image {
+    bounds := img.Bounds()
+    out := image.NewRGBA(bounds)
+    width, height := bounds.Dx(), bounds.Dy()
+    centerX, centerY := float64(width)/2, float64(height)/2
+    maxDist := math.Sqrt(centerX*centerX + centerY*centerY)
+
+    numWorkers := runtime.GOMAXPROCS(0)
+    var wg sync.WaitGroup
+    rowHeight := bounds.Dy() / numWorkers
+
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        startY := bounds.Min.Y + i*rowHeight
+        endY := bounds.Min.Y + (i+1)*rowHeight
+        if i == numWorkers-1 {
+            endY = bounds.Max.Y
+        }
+        go func(startY, endY int) {
+            defer wg.Done()
+            for y := startY; y < endY; y++ {
+                for x := bounds.Min.X; x < bounds.Max.X; x++ {
+                    r, g, b, a := img.At(x, y).RGBA()
+                    
+                    // Calculate distance from center
+                    dist := math.Sqrt(math.Pow(float64(x-bounds.Min.X)-centerX, 2) + 
+                                    math.Pow(float64(y-bounds.Min.Y)-centerY, 2))
+                    
+                    // Calculate vignette factor
+                    factor := 1.0 - (dist/maxDist)*intensity
+                    factor = clamp(factor, 0, 1)
+                    
+                    out.Set(x, y, color.RGBA{
+                        uint8(clamp(float64(r>>8)*factor, 0, 255)),
+                        uint8(clamp(float64(g>>8)*factor, 0, 255)),
+                        uint8(clamp(float64(b>>8)*factor, 0, 255)),
+                        uint8(a >> 8),
+                    })
+                }
+            }
+        }(startY, endY)
+    }
+    wg.Wait()
+    return out
+}
+
+// applyPixelateParallel creates pixelated effect
+func applyPixelateParallel(img image.Image, size int) image.Image {
+    bounds := img.Bounds()
+    out := image.NewRGBA(bounds)
+    width, height := bounds.Dx(), bounds.Dy()
+
+    numWorkers := runtime.GOMAXPROCS(0)
+    var wg sync.WaitGroup
+    blockHeight := height / numWorkers
+
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        startY := i * blockHeight
+        endY := (i + 1) * blockHeight
+        if i == numWorkers-1 {
+            endY = height
+        }
+        go func(startY, endY int) {
+            defer wg.Done()
+            for y := startY; y < endY; y += size {
+                for x := 0; x < width; x += size {
+                    // Calculate block bounds
+                    blockWidth := size
+                    blockHeight := size
+                    if x+blockWidth > width {
+                        blockWidth = width - x
+                    }
+                    if y+blockHeight > endY {
+                        blockHeight = endY - y
+                    }
+                    
+                    // Calculate average color in block
+                    var rSum, gSum, bSum, count float64
+                    for by := y; by < y+blockHeight; by++ {
+                        for bx := x; bx < x+blockWidth; bx++ {
+                            r, g, b, _ := img.At(bx+bounds.Min.X, by+bounds.Min.Y).RGBA()
+                            rSum += float64(r >> 8)
+                            gSum += float64(g >> 8)
+                            bSum += float64(b >> 8)
+                            count++
+                        }
+                    }
+                    
+                    avgR := rSum / count
+                    avgG := gSum / count
+                    avgB := bSum / count
+                    
+                    // Fill block with average color
+                    for by := y; by < y+blockHeight; by++ {
+                        for bx := x; bx < x+blockWidth; bx++ {
+                            out.Set(bx+bounds.Min.X, by+bounds.Min.Y, color.RGBA{
+                                uint8(avgR),
+                                uint8(avgG),
+                                uint8(avgB),
+                                255,
+                            })
+                        }
+                    }
+                }
+            }
+        }(startY, endY)
+    }
+    wg.Wait()
+    return out
+}
+
+// applySobelEdgeDetection applies Sobel edge detection
+func applySobelEdgeDetection(img image.Image) image.Image {
+    bounds := img.Bounds()
+    out := image.NewRGBA(bounds)
+    width, height := bounds.Dx(), bounds.Dy()
+
+    // Sobel kernels
+    sobelX := [3][3]float64{
+        {-1, 0, 1},
+        {-2, 0, 2},
+        {-1, 0, 1},
+    }
+    sobelY := [3][3]float64{
+        {-1, -2, -1},
+        {0, 0, 0},
+        {1, 2, 1},
+    }
+
+    numWorkers := runtime.GOMAXPROCS(0)
+    var wg sync.WaitGroup
+    rowHeight := height / numWorkers
+
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        startY := i * rowHeight
+        endY := (i + 1) * rowHeight
+        if i == numWorkers-1 {
+            endY = height
+        }
+        go func(startY, endY int) {
+            defer wg.Done()
+            for y := startY; y < endY; y++ {
+                for x := 0; x < width; x++ {
+                    var gx, gy float64
+                    
+                    // Apply Sobel kernels
+                    for ky := -1; ky <= 1; ky++ {
+                        for kx := -1; kx <= 1; kx++ {
+                            nx, ny := x+kx, y+ky
+                            if nx >= 0 && nx < width && ny >= 0 && ny < height {
+                                r, _, _, _ := img.At(nx+bounds.Min.X, ny+bounds.Min.Y).RGBA()
+                                gray := float64(r >> 8)
+                                gx += gray * sobelX[ky+1][kx+1]
+                                gy += gray * sobelY[ky+1][kx+1]
+                            }
+                        }
+                    }
+                    
+                    // Calculate gradient magnitude
+                    magnitude := math.Sqrt(gx*gx + gy*gy)
+                    magnitude = clamp(magnitude, 0, 255)
+                    
+                    out.Set(x+bounds.Min.X, y+bounds.Min.Y, color.RGBA{
+                        uint8(255 - magnitude),
+                        uint8(255 - magnitude),
+                        uint8(255 - magnitude),
+                        255,
+                    })
+                }
+            }
+        }(startY, endY)
+    }
+    wg.Wait()
+    return out
+}
+
+// RGB to HSL conversion
+func rgbToHsl(r, g, b float64) (h, s, l float64) {
+    r /= 255
+    g /= 255
+    b /= 255
+    
+    max := math.Max(r, math.Max(g, b))
+    min := math.Min(r, math.Min(g, b))
+    
+    l = (max + min) / 2
+    
+    if max == min {
+        h = 0
+        s = 0
+    } else {
+        d := max - min
+        if l > 0.5 {
+            s = d / (2 - max - min)
+        } else {
+            s = d / (max + min)
+        }
+        
+        switch max {
+        case r:
+            h = (g - b) / d
+            if g < b {
+                h += 6
+            }
+        case g:
+            h = (b-r)/d + 2
+        case b:
+            h = (r-g)/d + 4
+        }
+        h *= math.Pi / 3
+    }
+    return
+}
+
+// HSL to RGB conversion
+func hslToRgb(h, s, l float64) (r, g, b float64) {
+    if s == 0 {
+        r, g, b = l, l, l
+    } else {
+        var q float64
+        if l < 0.5 {
+            q = l * (1 + s)
+        } else {
+            q = l + s - l*s
+        }
+        p := 2*l - q
+        
+        r = hueToRgb(p, q, h+2*math.Pi/3)
+        g = hueToRgb(p, q, h)
+        b = hueToRgb(p, q, h-2*math.Pi/3)
+    }
+    
+    r *= 255
+    g *= 255
+    b *= 255
+    return
+}
+
+func hueToRgb(p, q, t float64) float64 {
+    if t < 0 {
+        t += 2 * math.Pi
+    }
+    if t > 2*math.Pi {
+        t -= 2 * math.Pi
+    }
+    
+    t /= 2 * math.Pi
+    
+    if t < 1.0/6.0 {
+        return p + (q-p)*6*t
+    }
+    if t < 1.0/2.0 {
+        return q
+    }
+    if t < 2.0/3.0 {
+        return p + (q-p)*(2.0/3.0-t)*6
+    }
+    return p
 }
