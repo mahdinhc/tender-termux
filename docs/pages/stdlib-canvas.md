@@ -1,4 +1,3 @@
-
 ## Canvas Module Documentation
 
 The `canvas` module provides functionalities for creating and manipulating graphical elements.

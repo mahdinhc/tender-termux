@@ -1,34 +1,162 @@
-## DLL Module Documentation
+# dll Module Documentation
 
-The `dll` module provides functionalities for loading and calling functions from dynamic-link libraries (DLLs) in the Windows environment.
+The `dll` module provides comprehensive functionalities for loading, managing, and calling functions from dynamic-link libraries (DLLs) in the Windows environment, including memory management, error handling, and system API interactions.
 
-### Functions
+## Core Functions
 
-#### `new(dll_name)`
+### `new(dll_name)`
+Loads a dynamic-link library using lazy loading (loads on first use).
+- **Parameters**: `dll_name` - Name of the DLL file to load (string)
+- **Returns**: DLL object with procedure access
+- **Example**: `kernel32 := dll.new("kernel32.dll")`
 
-Loads a dynamic-link library (DLL) with the specified name.
+### `load(dll_name)`
+Immediately loads a dynamic-link library.
+- **Parameters**: `dll_name` - Name of the DLL file to load (string)
+- **Returns**: DLL object with procedure access
+- **Example**: `user32 := dll.load("user32.dll")`
 
-- `dll_name`: Name of the DLL file to load.
+### `call_dll(dll_name, function_name, arguments...)`
+Directly calls a DLL function without creating a DLL object.
+- **Parameters**: `dll_name` - DLL name, `function_name` - Function name, `arguments` - Function arguments
+- **Returns**: Function result as integer
+- **Example**: `result := dll.call_dll("kernel32.dll", "Beep", 500, 300)`
 
-#### `load(dll_name)`
+## DLL Object Functions
 
-Loads a dynamic-link library (DLL) with the specified name.
-
-- `dll_name`: Name of the DLL file to load.
-
-### DLL Functions
-
-#### `proc(function_name)`
-
+### `proc(function_name)`
 Retrieves a procedure address from the loaded DLL.
+- **Parameters**: `function_name` - Name of the function to retrieve (string)
+- **Returns**: Procedure object for calling the function
+- **Example**: `message_box := user32.proc("MessageBoxW")`
 
-- `function_name`: Name of the function to retrieve.
+### `handle`
+Returns the handle to the loaded DLL.
+- **Returns**: DLL handle as integer
+- **Example**: `handle := kernel32.handle`
 
-#### `call(arguments...)`
+### `name`
+Returns the name of the loaded DLL.
+- **Returns**: DLL name as string
+- **Example**: `name := kernel32.name`
 
-Calls a function from the loaded DLL.
+### `unload()`
+Unloads the DLL from memory (only for DLLs loaded with `load()`).
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll_obj.unload()`
 
-- `arguments`: Arguments to pass to the function.
+## Procedure Object Functions
+
+### `call(arguments...)`
+Calls the DLL function with the specified arguments.
+- **Parameters**: `arguments` - Function arguments (integers, floats, strings, bytes, booleans, null, or pointers)
+- **Returns**: Function result as integer
+- **Example**: `result := add_func.call(3, 4)`
+
+### `name`
+Returns the name of the procedure.
+- **Returns**: Function name as string
+- **Example**: `func_name := proc.name`
+
+### `addr`
+Returns the memory address of the procedure.
+- **Returns**: Function address as integer
+- **Example**: `address := proc.addr`
+
+## System Functions
+
+### `last_error()`
+Gets the last error code from Windows API.
+- **Returns**: Last error code as integer
+- **Example**: `error_code := dll.last_error()`
+
+### `free_library(handle)`
+Unloads a DLL from memory by handle.
+- **Parameters**: `handle` - DLL handle to unload
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll.free_library(handle)`
+
+### `get_proc_address(handle, proc_name)`
+Gets the address of a function in a loaded DLL.
+- **Parameters**: `handle` - DLL handle, `proc_name` - Function name
+- **Returns**: Function address as integer
+- **Example**: `addr := dll.get_proc_address(handle, "FunctionName")`
+
+## Memory Management
+
+### `memory.alloc(size)`
+Allocates memory from the process heap.
+- **Parameters**: `size` - Number of bytes to allocate
+- **Returns**: Pointer object to allocated memory
+- **Example**: `mem := dll.memory.alloc(1024)`
+
+### `memory.free(pointer)`
+Frees previously allocated memory.
+- **Parameters**: `pointer` - Pointer object to free
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll.memory.free(mem)`
+
+### `memory.copy(dest, src, size)`
+Copies memory between pointers.
+- **Parameters**: `dest` - Destination pointer, `src` - Source pointer, `size` - Number of bytes to copy
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll.memory.copy(dest_ptr, src_ptr, 100)`
+
+### `memory.read_string(pointer, max_len)`
+Reads a null-terminated string from memory.
+- **Parameters**: `pointer` - Pointer to string data, `max_len` - Maximum length to read
+- **Returns**: String read from memory
+- **Example**: `text := dll.memory.read_string(str_ptr, 256)`
+
+## Pointer Operations
+
+### `pointer.create(address)`
+Creates a pointer object from an address.
+- **Parameters**: `address` - Memory address
+- **Returns**: Pointer object
+- **Example**: `ptr := dll.pointer.create(0x12345678)`
+
+### `pointer.offset(pointer, offset)`
+Creates a new pointer with an offset from the original.
+- **Parameters**: `pointer` - Base pointer, `offset` - Byte offset
+- **Returns**: New pointer object
+- **Example**: `new_ptr := dll.pointer.offset(ptr, 16)`
+
+### `pointer.read_int(pointer)`
+Reads a 4-byte integer from memory.
+- **Parameters**: `pointer` - Pointer to integer data
+- **Returns**: Integer value
+- **Example**: `value := dll.pointer.read_int(int_ptr)`
+
+### `pointer.write_int(pointer, value)`
+Writes a 4-byte integer to memory.
+- **Parameters**: `pointer` - Pointer to write to, `value` - Integer value to write
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll.pointer.write_int(int_ptr, 42)`
+
+### `pointer.read_bytes(pointer, size)`
+Reads bytes from memory.
+- **Parameters**: `pointer` - Pointer to data, `size` - Number of bytes to read
+- **Returns**: Byte array
+- **Example**: `data := dll.pointer.read_bytes(data_ptr, 100)`
+
+### `pointer.write_bytes(pointer, data)`
+Writes bytes to memory.
+- **Parameters**: `pointer` - Pointer to write to, `data` - Byte array to write
+- **Returns**: Boolean indicating success
+- **Example**: `success := dll.pointer.write_bytes(data_ptr, byte_data)`
+
+## Supported Argument Types
+
+- **Integers**: Passed directly as 32/64-bit values
+- **Floats**: Converted to integer representation (may lose precision)
+- **Strings**: Converted to UTF-16 and passed as pointers
+- **Bytes**: Passed as pointers to byte arrays
+- **Booleans**: Converted to 0 (false) or 1 (true)
+- **Null**: Passed as zero pointer
+- **Pointers**: Passed directly as memory addresses
+
+
 
 ### Example Usage
 

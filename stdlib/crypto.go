@@ -36,6 +36,7 @@ var cryptoModule = map[string]tender.Object{
 	"rsa":          cryptoRSAModule,
 	"ecdsa":        cryptoECDSAModule,
 	"ed25519":      cryptoEd25519Module,
+	"random":       cryptoRandomModule,
 	"pbkdf2":       &tender.UserFunction{Name: "pbkdf2", Value: cryptoPBKDF2},
 	"bcrypt":       &tender.UserFunction{Name: "bcrypt", Value: cryptoBcrypt},
 	"scrypt":       &tender.UserFunction{Name: "scrypt", Value: cryptoScrypt},

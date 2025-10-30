@@ -23,6 +23,7 @@ Tender compiles into bytecode and executes on a stack-based virtual machine (VM)
 - [rand](docs/pages/stdlib-rand.md): Random number generation  
 - [fmt](docs/pages/stdlib-fmt.md): Formatting functions  
 - [json](docs/pages/stdlib-json.md): JSON handling functions  
+- [xml](docs/pages/stdlib-xml.md): XML handling functions  
 - [base64](docs/pages/stdlib-base64.md): Base64 encoding and decoding  
 - [hex](docs/pages/stdlib-hex.md): Hexadecimal encoding and decoding  
 - [colors](docs/pages/stdlib-colors.md): Functions to print colored text to the terminal  
