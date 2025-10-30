@@ -1026,23 +1026,8 @@ func builtinString(args ...Object) (Object, error) {
 	if argsLen != 1 {
 		return nil, ErrWrongNumArguments
 	}
-	if _, ok := args[0].(*String); ok {
-		return args[0], nil
-	}
-	if v, ok := args[0].(*Bytes); ok {
-		return &String{Value: string(v.Value)}, nil
-	}
-	v, ok := ToString(args[0])
-	if ok {
-		if len(v) > MaxStringLen {
-			return nil, ErrStringLimit
-		}
-		return &String{Value: v}, nil
-	}
-	// if argsLen == 2 {
-		// return args[1], nil
-	// }
-	return NullValue, nil
+	v, _ := ToString(args[0])
+	return &String{Value: v}, nil
 }
 
 func builtinInt(args ...Object) (Object, error) {

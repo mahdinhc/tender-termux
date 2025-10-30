@@ -65,6 +65,17 @@ func CountObjects(o Object) (c int) {
 	return
 }
 
+
+// func ToString(o Object) string {
+	// if str, isStr := o.(*String); isStr {
+		// return str.Value
+	// } else if byt, isByt := o.(*Bytes); isByt {
+		// return string(byt.Value)
+	// } else {
+		// return o.String()
+	// }
+// }
+
 // ToString will try to convert object o to string value.
 func ToString(o Object) (v string, ok bool) {
 	ok = true
@@ -79,7 +90,7 @@ func ToString(o Object) (v string, ok bool) {
 }
 
 
-// ToString will try to convert object o to string value.
+// ToString will try to convert object o to formated string value.
 func ToStringFormated(o Object) (v string, ok bool) {
 	ok = true
 	if str, isStr := o.(*String); isStr {

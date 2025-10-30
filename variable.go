@@ -103,8 +103,8 @@ func (v *Variable) Map() map[string]interface{} {
 // String returns string value of the variable value. It returns 0 if the value
 // is not convertible to string.
 func (v *Variable) String() string {
-	c, _ := ToString(v.value)
-	return c
+	s, _ := ToString(v.value)
+	return s
 }
 
 // Bytes returns a byte slice of the variable value. It returns nil if the

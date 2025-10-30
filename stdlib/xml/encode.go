@@ -65,7 +65,7 @@ func encodeValue(buf *bytes.Buffer, obj tender.Object, key string, indentLevel i
 		}
 		return nil
 	default:
-		str := o.String()
+		str, _ := tender.ToString(o)
 		return encodeString(buf, &tender.String{Value: str}, key, indentLevel, inArray)
 	}
 }
@@ -143,7 +143,9 @@ func encodeMap(buf *bytes.Buffer, m *tender.Map, key string, indentLevel int, in
 			
 			if attrValue != tender.NullValue {
 				buf.WriteString("=\"")
-				buf.WriteString(escapeAttribute(attrValue.String()))
+				// buf.WriteString(escapeAttribute(attrValue.String()))
+				v, _ := tender.ToString(attrValue)
+				buf.WriteString(escapeAttribute(v))
 				buf.WriteString("\"")
 			}
 		}
@@ -161,7 +163,8 @@ func encodeMap(buf *bytes.Buffer, m *tender.Map, key string, indentLevel int, in
 	for _, child := range children {
 		if child.key == childNodeKey {
 			// Text content
-			buf.WriteString(escapeTextNode(child.value.String()))
+			v, _ := tender.ToString(child.value)
+			buf.WriteString(escapeTextNode(v))
 		} else {
 			hasElementChildren = true
 			if key != "" {
