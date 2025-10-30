@@ -85,6 +85,50 @@ func NewVM(bytecode *Bytecode, globals []Object, maxAllocs int64) *VM {
 	return v
 }
 
+
+
+
+// --- VM slot helpers for pointer support ---
+
+// FindGlobalIndexByValue searches VM globals for the given object pointer and
+// returns its index. This is O(n) and intended only for use in situations where
+// the caller can provide the exact Object reference (e.g. immediately after
+// evaluating a variable expression). It returns -1,false when not found.
+func (v *VM) FindGlobalIndexByValue(target Object) (int, bool) {
+	if target == nil {
+		return -1, false
+	}
+	for i, g := range v.globals {
+		if g == target {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
+// GetGlobalSlotPointer returns a pointer to the global variable slot at the
+// provided index. Caller should ensure index is valid. Returns nil when index
+// is out of range.
+func (v *VM) GetGlobalSlotPointer(index int) *Object {
+	if index < 0 || index >= len(v.globals) {
+		return nil
+	}
+	return &v.globals[index]
+}
+
+// SetGlobalByIndex sets the global variable at index to the provided value.
+// Returns an error when the index is invalid.
+func (v *VM) SetGlobalByIndex(index int, val Object) error {
+	if index < 0 || index >= len(v.globals) {
+		return fmt.Errorf("invalid global index %d", index)
+	}
+	v.globals[index] = val
+	return nil
+}
+
+
+
+
 // Run starts the execution.
 func (v *VM) Run() (err error) {
 	atomic.StoreInt64(&v.aborting, 0)
