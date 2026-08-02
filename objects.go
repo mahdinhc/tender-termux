@@ -2593,53 +2593,82 @@ func (o *BoundMethod) Call(args ...Object) (Object, error) {
 	newArgs[0] = o.Receiver
 	copy(newArgs[1:], args)
 	return o.Func.Call(newArgs...)
-}
+}
 
-// Matrix represents a 2D matrix of float64 values.
-type Matrix struct {
+// MatrixElement constrains allowed numeric types for high-performance matrices.
+type MatrixElement interface {
+	~int64 | ~float64 | ~complex128
+}
+
+// Matrix represents a generic 2D dense matrix backed by a contiguous 1D slice.
+type Matrix[T MatrixElement] struct {
 	ObjectImpl
 	Rows int
 	Cols int
-	Data []float64
+	Data []T
 }
 
-// TypeName returns the type name.
-func (m *Matrix) TypeName() string {
-	return "matrix"
+// Ensure generic Matrix types satisfy the Tender Object interface
+var (
+	_ Object = (*Matrix[int64])(nil)
+	_ Object = (*Matrix[float64])(nil)
+	_ Object = (*Matrix[complex128])(nil)
+)
+
+// TypeName returns the dynamic runtime object type name.
+func (m *Matrix[T]) TypeName() string {
+	var zero T
+	switch any(zero).(type) {
+	case int64:
+		return "matrix:int"
+	case float64:
+		return "matrix:float"
+	case complex128:
+		return "matrix:complex"
+	default:
+		return "matrix"
+	}
 }
 
-// String returns a human‑readable, column‑aligned matrix representation.
-func (m *Matrix) String() string {
+// String provides formatted multi-line matrix representation.
+func (m *Matrix[T]) String() string {
 	if m.Rows == 0 || m.Cols == 0 {
 		return "[]"
 	}
-	
-	// Helper to format a float with 2 decimal places only if needed
-	formatFloat := func(val float64) string {
-		// Check if the value is effectively an integer (within floating point tolerance)
-		if math.Abs(val-math.Round(val)) < 1e-9 {
-			return fmt.Sprintf("%.0f", val)
-		}
-		return fmt.Sprintf("%.2f", val)
+
+	var isFloat bool
+	var zero T
+	switch any(zero).(type) {
+	case float64:
+		isFloat = true
 	}
-	
-	// First pass: compute column widths
+
+	formatVal := func(val T) string {
+		if isFloat {
+			f := any(val).(float64)
+			if math.Abs(f-math.Round(f)) < 1e-9 {
+				return fmt.Sprintf("%.0f", f)
+			}
+			return fmt.Sprintf("%.2f", f)
+		}
+		return fmt.Sprintf("%v", val)
+	}
+
 	colWidths := make([]int, m.Cols)
 	for i := 0; i < m.Rows; i++ {
 		for j := 0; j < m.Cols; j++ {
-			valStr := formatFloat(m.Data[i*m.Cols+j])
+			valStr := formatVal(m.Data[i*m.Cols+j])
 			if len(valStr) > colWidths[j] {
 				colWidths[j] = len(valStr)
 			}
 		}
 	}
-	
-	// Second pass: build the string
+
 	var sb strings.Builder
 	for i := 0; i < m.Rows; i++ {
 		sb.WriteString("│")
 		for j := 0; j < m.Cols; j++ {
-			valStr := formatFloat(m.Data[i*m.Cols+j])
+			valStr := formatVal(m.Data[i*m.Cols+j])
 			sb.WriteString(valStr)
 			padding := colWidths[j] - len(valStr)
 			if padding > 0 {
@@ -2657,150 +2686,199 @@ func (m *Matrix) String() string {
 	return sb.String()
 }
 
-// Copy returns a deep copy of the matrix.
-func (m *Matrix) Copy() Object {
-	newData := make([]float64, len(m.Data))
+// Copy performs a deep copy of the underlying flat slice.
+func (m *Matrix[T]) Copy() Object {
+	newData := make([]T, len(m.Data))
 	copy(newData, m.Data)
-	return &Matrix{
+	return &Matrix[T]{
 		Rows: m.Rows,
 		Cols: m.Cols,
 		Data: newData,
 	}
 }
 
-// IsFalsy returns true if the matrix has no elements.
-func (m *Matrix) IsFalsy() bool {
+// IsFalsy returns false if the matrix is empty (0 rows or 0 cols).
+func (m *Matrix[T]) IsFalsy() bool {
 	return len(m.Data) == 0
 }
 
+func toFloat64[T MatrixElement](val T) float64 {
+	switch v := any(val).(type) {
+	case int64:
+		return float64(v)
+	case float64:
+		return v
+	case complex128:
+		return real(v)
+	}
+	return 0
+}
+
+func toComplex128[T MatrixElement](val T) complex128 {
+	switch v := any(val).(type) {
+	case int64:
+		return complex(float64(v), 0)
+	case float64:
+		return complex(v, 0)
+	case complex128:
+		return v
+	}
+	return 0
+}
+
+func scalarToT[T MatrixElement](obj Object) (T, bool) {
+	var zero T
+	switch any(zero).(type) {
+	case int64:
+		if v, ok := obj.(*Int); ok {
+			return any(v.Value).(T), true
+		}
+		if v, ok := obj.(*Float); ok {
+			return any(int64(v.Value)).(T), true
+		}
+	case float64:
+		if v, ok := obj.(*Int); ok {
+			return any(float64(v.Value)).(T), true
+		}
+		if v, ok := obj.(*Float); ok {
+			return any(v.Value).(T), true
+		}
+	case complex128:
+		if v, ok := obj.(*Int); ok {
+			return any(complex(float64(v.Value), 0)).(T), true
+		}
+		if v, ok := obj.(*Float); ok {
+			return any(complex(v.Value, 0)).(T), true
+		}
+		if v, ok := obj.(*Complex); ok {
+			return any(v.Value).(T), true
+		}
+	}
+	return zero, false
+}
+
 // BinaryOp implements matrix + matrix, - matrix, * matrix, and scalar +, -, *, /.
-func (m *Matrix) BinaryOp(op token.Token, rhs Object) (Object, error) {
-	switch rhs := rhs.(type) {
-	case *Matrix:
+func (m *Matrix[T]) BinaryOp(op token.Token, rhs Object) (Object, error) {
+	// Matrix op Matrix
+	if rhsMat, ok := rhs.(*Matrix[T]); ok {
 		switch op {
 		case token.Add:
-			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
-				return nil, fmt.Errorf("dimension mismatch: cannot add %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			if m.Rows != rhsMat.Rows || m.Cols != rhsMat.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot add %dx%d and %dx%d", m.Rows, m.Cols, rhsMat.Rows, rhsMat.Cols)
 			}
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
 			for i := range m.Data {
-				res.Data[i] = m.Data[i] + rhs.Data[i]
+				res.Data[i] = m.Data[i] + rhsMat.Data[i]
 			}
 			return res, nil
 
 		case token.Sub:
-			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
-				return nil, fmt.Errorf("dimension mismatch: cannot subtract %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			if m.Rows != rhsMat.Rows || m.Cols != rhsMat.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot subtract %dx%d and %dx%d", m.Rows, m.Cols, rhsMat.Rows, rhsMat.Cols)
 			}
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
 			for i := range m.Data {
-				res.Data[i] = m.Data[i] - rhs.Data[i]
+				res.Data[i] = m.Data[i] - rhsMat.Data[i]
 			}
 			return res, nil
 
 		case token.Mul:
-			if m.Cols != rhs.Rows {
-				return nil, fmt.Errorf("dimension mismatch: cannot multiply %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			if m.Cols != rhsMat.Rows {
+				return nil, fmt.Errorf("dimension mismatch: cannot multiply %dx%d and %dx%d", m.Rows, m.Cols, rhsMat.Rows, rhsMat.Cols)
 			}
-			res := &Matrix{Rows: m.Rows, Cols: rhs.Cols, Data: make([]float64, m.Rows*rhs.Cols)}
+			res := &Matrix[T]{Rows: m.Rows, Cols: rhsMat.Cols, Data: make([]T, m.Rows*rhsMat.Cols)}
 			for i := 0; i < m.Rows; i++ {
 				for k := 0; k < m.Cols; k++ {
 					temp := m.Data[i*m.Cols+k]
-					for j := 0; j < rhs.Cols; j++ {
-						res.Data[i*rhs.Cols+j] += temp * rhs.Data[k*rhs.Cols+j]
+					for j := 0; j < rhsMat.Cols; j++ {
+						res.Data[i*rhsMat.Cols+j] += temp * rhsMat.Data[k*rhsMat.Cols+j]
 					}
 				}
 			}
 			return res, nil
 
 		case token.Quo:
-			// Element‑wise division (Hadamard division), not matrix division
-			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
-				return nil, fmt.Errorf("dimension mismatch: cannot element‑wise divide %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			if m.Rows != rhsMat.Rows || m.Cols != rhsMat.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot element‑wise divide %dx%d and %dx%d", m.Rows, m.Cols, rhsMat.Rows, rhsMat.Cols)
 			}
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+			var zero T
+			var isFloat bool
+			switch any(zero).(type) {
+			case float64:
+				isFloat = true
+			}
 			for i := range m.Data {
-				if rhs.Data[i] == 0 {
-					res.Data[i] = math.Inf(1)
+				if rhsMat.Data[i] == zero {
+					if isFloat {
+						res.Data[i] = any(math.Inf(1)).(T)
+					} else {
+						return nil, fmt.Errorf("division by zero matrix element")
+					}
 				} else {
-					res.Data[i] = m.Data[i] / rhs.Data[i]
+					res.Data[i] = m.Data[i] / rhsMat.Data[i]
 				}
 			}
 			return res, nil
 		}
-
-	case *Float:
-		scalar := rhs.Value
-		switch op {
-		case token.Add:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] + scalar
-			}
-			return res, nil
-		case token.Sub:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] - scalar
-			}
-			return res, nil
-		case token.Mul:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] * scalar
-			}
-			return res, nil
-		case token.Quo:
-			if scalar == 0 {
-				return nil, fmt.Errorf("division by zero scalar")
-			}
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] / scalar
-			}
-			return res, nil
-		}
-
-	case *Int:
-		scalar := float64(rhs.Value)
-		switch op {
-		case token.Add:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] + scalar
-			}
-			return res, nil
-		case token.Sub:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] - scalar
-			}
-			return res, nil
-		case token.Mul:
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] * scalar
-			}
-			return res, nil
-		case token.Quo:
-			if scalar == 0 {
-				return nil, fmt.Errorf("division by zero scalar")
-			}
-			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
-			for i := range m.Data {
-				res.Data[i] = m.Data[i] / scalar
-			}
-			return res, nil
-		}
 	}
+
+	// Matrix op Scalar
+	scalar, ok := scalarToT[T](rhs)
+	if !ok {
+		return nil, ErrInvalidOperator
+	}
+
+	switch op {
+	case token.Add:
+		res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+		for i := range m.Data {
+			res.Data[i] = m.Data[i] + scalar
+		}
+		return res, nil
+	case token.Sub:
+		res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+		for i := range m.Data {
+			res.Data[i] = m.Data[i] - scalar
+		}
+		return res, nil
+	case token.Mul:
+		res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+		for i := range m.Data {
+			res.Data[i] = m.Data[i] * scalar
+		}
+		return res, nil
+	case token.Quo:
+		var zero T
+		if scalar == zero {
+			return nil, fmt.Errorf("division by zero scalar")
+		}
+		res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+		for i := range m.Data {
+			res.Data[i] = m.Data[i] / scalar
+		}
+		return res, nil
+	}
+
 	return nil, ErrInvalidOperator
 }
 
+func formatTAsObject[T MatrixElement](val T) Object {
+	switch v := any(val).(type) {
+	case int64:
+		return &Int{Value: v}
+	case float64:
+		return &Float{Value: v}
+	case complex128:
+		return &Complex{Value: v}
+	}
+	return nil
+}
+
 // IndexGet handles properties, methods, and row view retrieval.
-func (m *Matrix) IndexGet(index Object) (Object, error) {
+func (m *Matrix[T]) IndexGet(index Object) (Object, error) {
 	if strIdx, ok := index.(*String); ok {
 		switch strIdx.Value {
-		// Basic properties
 		case "rows":
 			return &Int{Value: int64(m.Rows)}, nil
 		case "cols":
@@ -2809,68 +2887,97 @@ func (m *Matrix) IndexGet(index Object) (Object, error) {
 			return &Tuple{Value: []Object{&Int{Value: int64(m.Rows)}, &Int{Value: int64(m.Cols)}}}, nil
 		case "is_square":
 			return FromBool(m.Rows == m.Cols), nil
-
-		// Diagonal
 		case "diag":
 			if m.Rows != m.Cols {
 				return nil, fmt.Errorf("diagonal is only defined for square matrices")
 			}
 			diag := make([]Object, m.Rows)
 			for i := 0; i < m.Rows; i++ {
-				diag[i] = &Float{Value: m.Data[i*m.Cols+i]}
+				diag[i] = formatTAsObject(m.Data[i*m.Cols+i])
 			}
 			return &Array{Value: diag}, nil
-
-		// Flattened view
 		case "flatten":
 			arr := make([]Object, len(m.Data))
 			for i, v := range m.Data {
-				arr[i] = &Float{Value: v}
+				arr[i] = formatTAsObject(v)
 			}
 			return &Array{Value: arr}, nil
-
-		// Statistics
 		case "sum":
-			var sum float64
+			var sum T
 			for _, v := range m.Data {
 				sum += v
 			}
-			return &Float{Value: sum}, nil
+			return formatTAsObject(sum), nil
 		case "mean":
 			if len(m.Data) == 0 {
-				return &Float{Value: 0}, nil
+				var zero T
+				return formatTAsObject(zero), nil
 			}
-			var sum float64
+			var sum T
 			for _, v := range m.Data {
 				sum += v
 			}
-			return &Float{Value: sum / float64(len(m.Data))}, nil
+			var l T
+			switch any(l).(type) {
+			case int64:
+				l = any(int64(len(m.Data))).(T)
+			case float64:
+				l = any(float64(len(m.Data))).(T)
+			case complex128:
+				l = any(complex(float64(len(m.Data)), 0)).(T)
+			}
+			return formatTAsObject(sum / l), nil
 		case "min":
 			if len(m.Data) == 0 {
-				return &Float{Value: 0}, nil
+				var zero T
+				return formatTAsObject(zero), nil
 			}
-			min := m.Data[0]
-			for _, v := range m.Data[1:] {
-				if v < min {
-					min = v
+			// Special handling for min/max to avoid complex '<' compile error
+			var isComplex bool
+			var zero T
+			switch any(zero).(type) {
+			case complex128:
+				isComplex = true
+			}
+			if isComplex {
+				return nil, fmt.Errorf("min is not supported for complex matrices")
+			}
+			
+			// We can't use T with < directly if T includes complex.
+			// Workaround: cast to float64 for comparison if we know it's not complex.
+			minIdx := 0
+			for i, v := range m.Data[1:] {
+				if toFloat64(v) < toFloat64(m.Data[minIdx]) {
+					minIdx = i + 1
 				}
 			}
-			return &Float{Value: min}, nil
+			return formatTAsObject(m.Data[minIdx]), nil
+
 		case "max":
 			if len(m.Data) == 0 {
-				return &Float{Value: 0}, nil
+				var zero T
+				return formatTAsObject(zero), nil
 			}
-			max := m.Data[0]
-			for _, v := range m.Data[1:] {
-				if v > max {
-					max = v
+			var isComplex bool
+			var zero T
+			switch any(zero).(type) {
+			case complex128:
+				isComplex = true
+			}
+			if isComplex {
+				return nil, fmt.Errorf("max is not supported for complex matrices")
+			}
+			
+			maxIdx := 0
+			for i, v := range m.Data[1:] {
+				if toFloat64(v) > toFloat64(m.Data[maxIdx]) {
+					maxIdx = i + 1
 				}
 			}
-			return &Float{Value: max}, nil
+			return formatTAsObject(m.Data[maxIdx]), nil
+
 		case "rank":
 			return &Float{Value: float64(m.rank())}, nil
-
-		// Determinant (LU decomposition, O(n³))
 		case "det":
 			if m.Rows != m.Cols {
 				return nil, fmt.Errorf("determinant is only defined for square matrices")
@@ -2879,24 +2986,18 @@ func (m *Matrix) IndexGet(index Object) (Object, error) {
 			if err != nil {
 				return nil, err
 			}
-			return &Float{Value: det}, nil
-
-		// Trace
+			return formatTAsObject(det), nil
 		case "trace":
 			if m.Rows != m.Cols {
 				return nil, fmt.Errorf("trace is only defined for square matrices")
 			}
-			var sum float64
+			var sum T
 			for i := 0; i < m.Rows; i++ {
 				sum += m.Data[i*m.Cols+i]
 			}
-			return &Float{Value: sum}, nil
-
-		// Transpose
+			return formatTAsObject(sum), nil
 		case "T":
 			return m.Transpose(), nil
-
-		// Methods: row, col
 		case "row":
 			return &NativeFunction{
 				Name: "row",
@@ -2913,7 +3014,7 @@ func (m *Matrix) IndexGet(index Object) (Object, error) {
 					}
 					row := make([]Object, m.Cols)
 					for j := 0; j < m.Cols; j++ {
-						row[j] = &Float{Value: m.Data[i*m.Cols+j]}
+						row[j] = formatTAsObject(m.Data[i*m.Cols+j])
 					}
 					return &Array{Value: row}, nil
 				},
@@ -2934,35 +3035,31 @@ func (m *Matrix) IndexGet(index Object) (Object, error) {
 					}
 					col := make([]Object, m.Rows)
 					for i := 0; i < m.Rows; i++ {
-						col[i] = &Float{Value: m.Data[i*m.Cols+j]}
+						col[i] = formatTAsObject(m.Data[i*m.Cols+j])
 					}
 					return &Array{Value: col}, nil
 				},
 			}, nil
 		}
-		// Unknown property → return nil (no error)
 		return nil, nil
 	}
 
-	// Row view for integer index
 	if intIdx, ok := index.(*Int); ok {
 		row := int(intIdx.Value)
 		if row < 0 || row >= m.Rows {
 			return nil, fmt.Errorf("row index out of bounds")
 		}
-		return &rowView{matrix: m, row: row}, nil
+		return &rowView[T]{matrix: m, row: row}, nil
 	}
 	return nil, ErrInvalidIndexType
 }
 
-// IndexSet is not used directly; assignment goes via rowView.
-func (m *Matrix) IndexSet(index, value Object) error {
+func (m *Matrix[T]) IndexSet(index, value Object) error {
 	return fmt.Errorf("matrix element assignment must use m[i][j] = val")
 }
 
-// Transpose returns a new matrix with rows and columns swapped.
-func (m *Matrix) Transpose() *Matrix {
-	res := &Matrix{Rows: m.Cols, Cols: m.Rows, Data: make([]float64, len(m.Data))}
+func (m *Matrix[T]) Transpose() *Matrix[T] {
+	res := &Matrix[T]{Rows: m.Cols, Cols: m.Rows, Data: make([]T, len(m.Data))}
 	for i := 0; i < m.Rows; i++ {
 		for j := 0; j < m.Cols; j++ {
 			res.Data[j*m.Rows+i] = m.Data[i*m.Cols+j]
@@ -2971,78 +3068,79 @@ func (m *Matrix) Transpose() *Matrix {
 	return res
 }
 
-// ---------------------------------------------------------------------
-// Determinant using LU decomposition with partial pivoting
-// O(n³) time, numerically stable, works for singular matrices (det = 0)
-// ---------------------------------------------------------------------
-
-func (m *Matrix) luDet() (float64, error) {
+func (m *Matrix[T]) luDet() (T, error) {
 	n := m.Rows
+	var zero T
 	if n == 0 {
-		return 0, nil
+		return zero, nil
 	}
-	// Make a copy to avoid modifying the original
-	a := make([][]float64, n)
+	
+	a := make([][]complex128, n)
 	for i := 0; i < n; i++ {
-		a[i] = make([]float64, n)
+		a[i] = make([]complex128, n)
 		for j := 0; j < n; j++ {
-			a[i][j] = m.Data[i*n+j]
+			a[i][j] = toComplex128(m.Data[i*n+j])
 		}
 	}
-	det := 1.0
+	
+	det := complex128(1.0)
 	for i := 0; i < n; i++ {
-		// Find pivot
 		pivot := i
-		maxVal := math.Abs(a[i][i])
+		maxVal := cmplx.Abs(a[i][i])
 		for k := i + 1; k < n; k++ {
-			if abs := math.Abs(a[k][i]); abs > maxVal {
+			if abs := cmplx.Abs(a[k][i]); abs > maxVal {
 				maxVal = abs
 				pivot = k
 			}
 		}
 		if maxVal < 1e-15 {
-			// Matrix is singular (or nearly)
-			return 0, nil
+			return zero, nil
 		}
-		// Swap rows if needed
 		if pivot != i {
 			a[i], a[pivot] = a[pivot], a[i]
 			det = -det
 		}
-		// Eliminate below
 		for j := i + 1; j < n; j++ {
 			factor := a[j][i] / a[i][i]
 			for k := i; k < n; k++ {
 				a[j][k] -= factor * a[i][k]
 			}
 		}
-		// Multiply det by pivot (diagonal element)
 		det *= a[i][i]
 	}
-	return det, nil
+	
+	var typedDet T
+	switch any(zero).(type) {
+	case int64:
+		typedDet = any(int64(math.Round(real(det)))).(T)
+	case float64:
+		typedDet = any(real(det)).(T)
+	case complex128:
+		typedDet = any(det).(T)
+	}
+	return typedDet, nil
 }
 
-// rank computes the rank using Gaussian elimination.
-func (m *Matrix) rank() int {
+func (m *Matrix[T]) rank() int {
 	if m.Rows == 0 || m.Cols == 0 {
 		return 0
 	}
-	// Copy matrix
 	rows := m.Rows
 	cols := m.Cols
-	a := make([][]float64, rows)
+	
+	a := make([][]complex128, rows)
 	for i := 0; i < rows; i++ {
-		a[i] = make([]float64, cols)
+		a[i] = make([]complex128, cols)
 		for j := 0; j < cols; j++ {
-			a[i][j] = m.Data[i*cols+j]
+			a[i][j] = toComplex128(m.Data[i*cols+j])
 		}
 	}
+	
 	rank := 0
 	for col := 0; col < cols; col++ {
-		// Find pivot row
 		pivot := -1
 		for row := rank; row < rows; row++ {
-			if math.Abs(a[row][col]) > 1e-12 {
+			if cmplx.Abs(a[row][col]) > 1e-12 {
 				pivot = row
 				break
 			}
@@ -3050,9 +3148,7 @@ func (m *Matrix) rank() int {
 		if pivot == -1 {
 			continue
 		}
-		// Swap current row with pivot row
 		a[rank], a[pivot] = a[pivot], a[rank]
-		// Eliminate rows below
 		for row := rank + 1; row < rows; row++ {
 			factor := a[row][col] / a[rank][col]
 			for c := col; c < cols; c++ {
@@ -3067,12 +3163,11 @@ func (m *Matrix) rank() int {
 	return rank
 }
 
-// Determinant (legacy wrapper) – kept for compatibility
-func (m *Matrix) Determinant() (Object, error) {
+func (m *Matrix[T]) Determinant() (Object, error) {
 	return m.detFromIndex()
 }
 
-func (m *Matrix) detFromIndex() (Object, error) {
+func (m *Matrix[T]) detFromIndex() (Object, error) {
 	if m.Rows != m.Cols {
 		return nil, fmt.Errorf("determinant is only defined for square matrices")
 	}
@@ -3080,58 +3175,56 @@ func (m *Matrix) detFromIndex() (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Float{Value: det}, nil
+	return formatTAsObject(det), nil
 }
 
-// Trace returns the trace (as Object).
-func (m *Matrix) Trace() (Object, error) {
+func (m *Matrix[T]) Trace() (Object, error) {
 	if m.Rows != m.Cols {
 		return nil, fmt.Errorf("trace is only defined for square matrices")
 	}
-	var sum float64
+	var sum T
 	for i := 0; i < m.Rows; i++ {
 		sum += m.Data[i*m.Cols+i]
 	}
-	return &Float{Value: sum}, nil
+	return formatTAsObject(sum), nil
 }
 
-// ---- rowView: mutable row slice ----
-type rowView struct {
+type rowView[T MatrixElement] struct {
 	ObjectImpl
-	matrix *Matrix
+	matrix *Matrix[T]
 	row    int
 }
 
-func (rv *rowView) TypeName() string { return "row-view" }
+func (rv *rowView[T]) TypeName() string { return "row-view" }
 
-func (rv *rowView) String() string {
+func (rv *rowView[T]) String() string {
 	rowData := make([]string, rv.matrix.Cols)
 	for j := 0; j < rv.matrix.Cols; j++ {
-		rowData[j] = fmt.Sprintf("%g", rv.matrix.Data[rv.row*rv.matrix.Cols+j])
+		rowData[j] = fmt.Sprintf("%v", rv.matrix.Data[rv.row*rv.matrix.Cols+j])
 	}
 	return "[" + strings.Join(rowData, ", ") + "]"
 }
 
-func (rv *rowView) Copy() Object {
-	return &rowView{matrix: rv.matrix, row: rv.row}
+func (rv *rowView[T]) Copy() Object {
+	return &rowView[T]{matrix: rv.matrix, row: rv.row}
 }
 
-func (rv *rowView) Equals(another Object) bool {
+func (rv *rowView[T]) Equals(another Object) bool {
 	return false
 }
 
-func (rv *rowView) IndexGet(index Object) (Object, error) {
+func (rv *rowView[T]) IndexGet(index Object) (Object, error) {
 	if intIdx, ok := index.(*Int); ok {
 		col := int(intIdx.Value)
 		if col < 0 || col >= rv.matrix.Cols {
 			return nil, fmt.Errorf("column index out of bounds")
 		}
-		return &Float{Value: rv.matrix.Data[rv.row*rv.matrix.Cols+col]}, nil
+		return formatTAsObject(rv.matrix.Data[rv.row*rv.matrix.Cols+col]), nil
 	}
 	return nil, ErrInvalidIndexType
 }
 
-func (rv *rowView) IndexSet(index, value Object) error {
+func (rv *rowView[T]) IndexSet(index, value Object) error {
 	intIdx, ok := index.(*Int)
 	if !ok {
 		return ErrInvalidIndexType
@@ -3140,13 +3233,8 @@ func (rv *rowView) IndexSet(index, value Object) error {
 	if col < 0 || col >= rv.matrix.Cols {
 		return fmt.Errorf("column index out of bounds")
 	}
-	var val float64
-	switch v := value.(type) {
-	case *Float:
-		val = v.Value
-	case *Int:
-		val = float64(v.Value)
-	default:
+	val, ok := scalarToT[T](value)
+	if !ok {
 		return fmt.Errorf("can only assign numeric values to matrix elements")
 	}
 	rv.matrix.Data[rv.row*rv.matrix.Cols+col] = val

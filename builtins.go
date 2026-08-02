@@ -69,7 +69,6 @@ func init() {
 	addBuiltinFunction("range",  builtinRange, false)
 	addBuiltinFunction("freeze",  builtinFreeze, false)
 	addBuiltinFunction("matrix", builtinMatrix, false)
-	addBuiltinFunction("umatrix", builtinUMatrix, false)
 }
 
 // GetAllBuiltinFunctions returns all builtin function objects.
@@ -1517,48 +1516,28 @@ func parseNumber(s string) (int64, int) {
 }
 
 
+
 func builtinMatrix(args ...Object) (Object, error) {
 	argsLen := len(args)
 
-	// 1. Zero matrix: matrix(rows, cols)
-	if argsLen == 2 {
-		rows, rowsOk := ToInt(args[0])
-		cols, colsOk := ToInt(args[1])
-		if !rowsOk || !colsOk {
-			return nil, ErrInvalidArgumentType{
-				Name:     "arguments",
-				Expected: "int, int",
-				Found:    "non-integer",
-			}
-		}
-		if rows <= 0 || cols <= 0 {
-			return nil, fmt.Errorf("matrix dimensions must be positive, got %d, %d", rows, cols)
-		}
-		data := make([]float64, rows*cols)
-		return &Matrix{
-			Rows: rows,
-			Cols: cols,
-			Data: data,
-		}, nil
+	// 0 args -> empty float matrix
+	if argsLen == 0 {
+		return &Matrix[float64]{Rows: 0, Cols: 0, Data: []float64{}}, nil
 	}
 
-	// 2. Single argument cases
+	// 1 arg cases
 	if argsLen == 1 {
 		arg := args[0]
-
-		// 2a. 2D array → matrix([[1,2],[3,4]])
 		if arr, ok := arg.(*Array); ok {
-			// Check if it's a 2D array (first element is also an Array)
 			if len(arr.Value) == 0 {
-				return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
+				return &Matrix[float64]{Rows: 0, Cols: 0, Data: []float64{}}, nil
 			}
 			if _, ok := arr.Value[0].(*Array); ok {
-				// It's a 2D array
 				rows := len(arr.Value)
 				firstRow, _ := arr.Value[0].(*Array)
 				cols := len(firstRow.Value)
 				if rows == 0 || cols == 0 {
-					return &Matrix{Rows: rows, Cols: cols, Data: []float64{}}, nil
+					return &Matrix[float64]{Rows: rows, Cols: cols, Data: []float64{}}, nil
 				}
 				data := make([]float64, rows*cols)
 				for i, rowObj := range arr.Value {
@@ -1577,181 +1556,127 @@ func builtinMatrix(args ...Object) (Object, error) {
 						data[i*cols+j] = val
 					}
 				}
-				return &Matrix{
-					Rows: rows,
-					Cols: cols,
-					Data: data,
-				}, nil
+				return &Matrix[float64]{Rows: rows, Cols: cols, Data: data}, nil
 			}
 
-			// 2b. 1D array → automatic square matrix with padding
-			// Compute smallest n such that n*n >= len(arr.Value)
 			n := int(math.Ceil(math.Sqrt(float64(len(arr.Value)))))
 			if n == 0 {
-				return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
+				return &Matrix[float64]{Rows: 0, Cols: 0, Data: []float64{}}, nil
 			}
 			data := make([]float64, n*n)
-			// Fill with values from the array (row‑major)
 			for i, obj := range arr.Value {
-				if i >= n*n {
-					break // should not happen, but safe
-				}
+				if i >= n*n { break }
 				val, ok := ToFloat64(obj)
-				if !ok {
-					return nil, fmt.Errorf("matrix element at index %d is not a number", i)
-				}
+				if !ok { return nil, fmt.Errorf("matrix element at index %d is not a number", i) }
 				data[i] = val
 			}
-			// Remaining elements stay zero (already zero-initialized)
-			return &Matrix{
-				Rows: n,
-				Cols: n,
-				Data: data,
-			}, nil
+			return &Matrix[float64]{Rows: n, Cols: n, Data: data}, nil
 		}
-
-		// 2c. Diagonal matrix: matrix(5) or matrix(5, diag) handled below
-		// Actually, diagonal matrix uses two arguments, so we don't handle it here.
+		return nil, ErrInvalidArgumentType{Name: "first", Expected: "array", Found: arg.TypeName()}
 	}
 
-	// 3. Diagonal matrix: matrix(size, diagVal) 
+	// 2 args: matrix(rows, cols), matrix(size, diag)
 	if argsLen == 2 {
-		size, sizeOk := ToInt(args[0])
-		if sizeOk && size > 0 {
-			var diagVal float64 = 1.0
-			if val, ok := ToFloat64(args[1]); ok {
-				diagVal = val
-			} else {
-				return nil, ErrInvalidArgumentType{
-					Name:     "second",
-					Expected: "number",
-					Found:    args[1].TypeName(),
-				}
+		val1, ok1 := ToInt(args[0])
+		if !ok1 { return nil, ErrInvalidArgumentType{Name: "rows", Expected: "int", Found: args[0].TypeName()} }
+		
+		val2, ok2 := ToInt(args[1])
+		if ok2 {
+			// matrix(rows, cols)
+			rows, cols := int(val1), int(val2)
+			if rows <= 0 || cols <= 0 {
+				return nil, fmt.Errorf("matrix dimensions must be positive integers, got (%d, %d)", rows, cols)
 			}
+			return &Matrix[float64]{Rows: rows, Cols: cols, Data: make([]float64, rows*cols)}, nil
+		}
+
+		// matrix(size, diagVal)
+		size := int(val1)
+		if size > 0 {
+			diagVal, ok := ToFloat64(args[1])
+			if !ok { return nil, ErrInvalidArgumentType{Name: "second", Expected: "number", Found: args[1].TypeName()} }
 			data := make([]float64, size*size)
-			for i := 0; i < size; i++ {
-				data[i*size+i] = diagVal
-			}
-			return &Matrix{
-				Rows: size,
-				Cols: size,
-				Data: data,
-			}, nil
+			for i := 0; i < size; i++ { data[i*size+i] = diagVal }
+			return &Matrix[float64]{Rows: size, Cols: size, Data: data}, nil
 		}
+		return nil, fmt.Errorf("invalid matrix arguments")
 	}
 
-	// 4. No args → empty matrix
-	if argsLen == 0 {
-		return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
-	}
-
-	return nil, ErrWrongNumArguments
-}
-
-
-// builtinUMatrix creates a new UMatrix.
-//
-// Usage signatures:
-//   matrix(rows, cols)                     -> Defaults to float64 zeros
-//   matrix(rows, cols, "int"|"float"|"complex") -> Type specified zeros
-//   matrix(rows, cols, "float", fillValue) -> Filled with scalar value
-//   matrix(rows, cols, "int", [1, 2, 3, 4]) -> Populated from array
-func builtinUMatrix(args ...Object) (Object, error) {
-	numArgs := len(args)
-	if numArgs < 2 || numArgs > 4 {
-		return nil, fmt.Errorf("wrong number of arguments for matrix(): got %d, expected 2-4", numArgs)
-	}
-
-	// 1. Parse Rows and Cols
-	rowsObj, ok1 := args[0].(*Int)
-	colsObj, ok2 := args[1].(*Int)
-	if !ok1 || !ok2 {
-		return nil, fmt.Errorf("matrix() dimensions must be integers")
-	}
-
-	rows, cols := int(rowsObj.Value), int(colsObj.Value)
-	if rows <= 0 || cols <= 0 {
-		return nil, fmt.Errorf("matrix() dimensions must be positive integers, got (%d, %d)", rows, cols)
-	}
-
-	// 2. Determine Type (default: "float")
-	typeStr := "float"
-	if numArgs >= 3 {
+	// 3-4 args: matrix(rows, cols, type, [fill])
+	if argsLen == 3 || argsLen == 4 {
+		rowsObj, ok1 := args[0].(*Int)
+		colsObj, ok2 := args[1].(*Int)
+		if !ok1 || !ok2 { return nil, fmt.Errorf("matrix() dimensions must be integers") }
+		
+		rows, cols := int(rowsObj.Value), int(colsObj.Value)
+		if rows <= 0 || cols <= 0 { return nil, fmt.Errorf("matrix() dimensions must be positive integers, got (%d, %d)", rows, cols) }
+		
 		strObj, ok := args[2].(*String)
-		if !ok {
-			return nil, fmt.Errorf("matrix() element type must be a string (e.g., 'int', 'float', 'complex')")
+		if !ok { return nil, fmt.Errorf("matrix() element type must be a string (e.g., 'int', 'float', 'complex')") }
+		typeStr := strObj.Value
+
+		switch typeStr {
+		case "int":
+			m := &Matrix[int64]{Rows: rows, Cols: cols, Data: make([]int64, rows*cols)}
+			if argsLen == 4 {
+				err := fillMatrixData(m, args[3], func(o Object) (int64, bool) {
+					if v, ok := o.(*Int); ok { return v.Value, true }
+					return 0, false
+				})
+				if err != nil { return nil, err }
+			}
+			return m, nil
+
+		case "float":
+			m := &Matrix[float64]{Rows: rows, Cols: cols, Data: make([]float64, rows*cols)}
+			if argsLen == 4 {
+				err := fillMatrixData(m, args[3], func(o Object) (float64, bool) {
+					if v, ok := o.(*Float); ok { return v.Value, true }
+					if v, ok := o.(*Int); ok { return float64(v.Value), true }
+					return 0, false
+				})
+				if err != nil { return nil, err }
+			}
+			return m, nil
+
+		case "complex":
+			m := &Matrix[complex128]{Rows: rows, Cols: cols, Data: make([]complex128, rows*cols)}
+			if argsLen == 4 {
+				err := fillMatrixData(m, args[3], func(o Object) (complex128, bool) {
+					if v, ok := o.(*Complex); ok { return v.Value, true }
+					if v, ok := o.(*Float); ok { return complex(v.Value, 0), true }
+					if v, ok := o.(*Int); ok { return complex(float64(v.Value), 0), true }
+					return 0, false
+				})
+				if err != nil { return nil, err }
+			}
+			return m, nil
+
+		default:
+			return nil, fmt.Errorf("unsupported matrix element type '%s'", typeStr)
 		}
-		typeStr = strObj.Value
 	}
 
-	// 3. Populate UMatrix Data based on type
-	switch typeStr {
-	case "int":
-		m := NewUMatrix[int64](rows, cols)
-		if numArgs == 4 {
-			fillUMatrixData(m, args[3], func(o Object) (int64, bool) {
-				if v, ok := o.(*Int); ok { return v.Value, true }
-				return 0, false
-			})
-		}
-		return m, nil
-
-	case "float":
-		m := NewUMatrix[float64](rows, cols)
-		if numArgs == 4 {
-			fillUMatrixData(m, args[3], func(o Object) (float64, bool) {
-				if v, ok := o.(*Float); ok { return v.Value, true }
-				if v, ok := o.(*Int); ok { return float64(v.Value), true }
-				return 0, false
-			})
-		}
-		return m, nil
-
-	case "complex":
-		m := NewUMatrix[complex128](rows, cols)
-		if numArgs == 4 {
-			fillUMatrixData(m, args[3], func(o Object) (complex128, bool) {
-				if v, ok := o.(*Complex); ok { return v.Value, true }
-				if v, ok := o.(*Float); ok { return complex(v.Value, 0), true }
-				if v, ok := o.(*Int); ok { return complex(float64(v.Value), 0), true }
-				return 0, false
-			})
-		}
-		return m, nil
-
-	default:
-		return nil, fmt.Errorf("unsupported matrix element type '%s'", typeStr)
-	}
+	return nil, fmt.Errorf("wrong number of arguments for matrix(): got %d", argsLen)
 }
 
 // Helper to fill generic matrix data from either a scalar or array Object
-func fillUMatrixData[T UMatrixElement](m *UMatrix[T], fillObj Object, castFn func(Object) (T, bool)) error {
+func fillMatrixData[T MatrixElement](m *Matrix[T], fillObj Object, castFn func(Object) (T, bool)) error {
 	totalElements := m.Rows * m.Cols
-
 	switch obj := fillObj.(type) {
 	case *Array:
 		if len(obj.Value) != totalElements {
-			return fmt.Errorf("matrix initializer array length (%d) does not match matrix size (%d)", 
-				len(obj.Value), totalElements)
+			return fmt.Errorf("matrix initializer array length (%d) does not match matrix size (%d)", len(obj.Value), totalElements)
 		}
 		for i, el := range obj.Value {
 			val, ok := castFn(el)
-			if !ok {
-				return fmt.Errorf("invalid element type at array index %d", i)
-			}
+			if !ok { return fmt.Errorf("invalid element type at array index %d", i) }
 			m.Data[i] = val
 		}
-
 	default:
-		// Scalar fill value
 		val, ok := castFn(fillObj)
-		if !ok {
-			return fmt.Errorf("invalid fill value type for %s matrix", m.TypeName())
-		}
-		for i := 0; i < totalElements; i++ {
-			m.Data[i] = val
-		}
+		if !ok { return fmt.Errorf("invalid fill value type for matrix") }
+		for i := 0; i < totalElements; i++ { m.Data[i] = val }
 	}
-
 	return nil
 }
