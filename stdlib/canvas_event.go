@@ -16,9 +16,9 @@ func eventToObject(event interface{}) tender.Object {
 		case lifecycle.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "lifecycle"},
-					"to": &tender.Int{Value: int64(e.To)},
-					"from": &tender.Int{Value: int64(e.From)},
+					"kind": &tender.String{Value: "lifecycle"},
+					"next": &tender.Int{Value: int64(e.To)},
+					"prev": &tender.Int{Value: int64(e.From)},
 					"string": &tender.NativeFunction{
 						Value: FuncARS(e.String),
 					},
@@ -27,7 +27,7 @@ func eventToObject(event interface{}) tender.Object {
 		case mouse.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "mouse"},
+					"kind": &tender.String{Value: "mouse"},
 					"x": &tender.Int{Value: int64(e.X)},
 					"y": &tender.Int{Value: int64(e.Y)},
 					"button": &tender.Int{Value: int64(e.Button)},
@@ -44,7 +44,7 @@ func eventToObject(event interface{}) tender.Object {
 		case key.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "key"},
+					"kind": &tender.String{Value: "key"},
 					"rune": &tender.Char{Value: e.Rune},
 					"code": &tender.Int{Value: int64(e.Code)},
 					"direction": &tender.Int{Value: int64(e.Direction)},
@@ -57,14 +57,14 @@ func eventToObject(event interface{}) tender.Object {
 		case paint.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "paint"},
+					"kind": &tender.String{Value: "paint"},
 					"bool": tender.FromBool(e.External),
 				},
 			}
 		case size.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "size"},
+					"kind": &tender.String{Value: "size"},
 					"width_px": &tender.Int{Value: int64(e.WidthPx)},
 					"height_px": &tender.Int{Value: int64(e.HeightPx)},		
 					"width_pt": &tender.Float{Value: float64(e.WidthPt)},
@@ -76,7 +76,7 @@ func eventToObject(event interface{}) tender.Object {
 		case touch.Event:
 			return  &tender.ImmutableMap{
 				Value: map[string]tender.Object{
-					"type": &tender.String{Value: "touch"},
+					"kind": &tender.String{Value: "touch"},
 					"x": &tender.Float{Value: float64(e.X)},
 					"y": &tender.Float{Value: float64(e.Y)},		
 					"sequence": &tender.Int{Value: int64(e.Sequence)},

@@ -1,6 +1,7 @@
 test/
 site/
 build/
+v/glfw/glfw
 main.exe
 tender.exe
 *.exe
