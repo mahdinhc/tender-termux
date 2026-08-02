@@ -10,6 +10,8 @@ import (
 	"time"
 	"math/big"
 	"math/cmplx"
+	"runtime"
+	"sync"
 
 	"github.com/2dprototype/tender/parser"
 	"github.com/2dprototype/tender/token"
@@ -2783,19 +2785,7 @@ func (m *Matrix[T]) BinaryOp(op token.Token, rhs Object) (Object, error) {
 			return res, nil
 
 		case token.Mul:
-			if m.Cols != rhsMat.Rows {
-				return nil, fmt.Errorf("dimension mismatch: cannot multiply %dx%d and %dx%d", m.Rows, m.Cols, rhsMat.Rows, rhsMat.Cols)
-			}
-			res := &Matrix[T]{Rows: m.Rows, Cols: rhsMat.Cols, Data: make([]T, m.Rows*rhsMat.Cols)}
-			for i := 0; i < m.Rows; i++ {
-				for k := 0; k < m.Cols; k++ {
-					temp := m.Data[i*m.Cols+k]
-					for j := 0; j < rhsMat.Cols; j++ {
-						res.Data[i*rhsMat.Cols+j] += temp * rhsMat.Data[k*rhsMat.Cols+j]
-					}
-				}
-			}
-			return res, nil
+			return mulMatrix(m, rhsMat)
 
 		case token.Quo:
 			if m.Rows != rhsMat.Rows || m.Cols != rhsMat.Cols {
@@ -3058,11 +3048,126 @@ func (m *Matrix[T]) IndexSet(index, value Object) error {
 	return fmt.Errorf("matrix element assignment must use m[i][j] = val")
 }
 
+func mulMatrix[T MatrixElement](m *Matrix[T], rhs *Matrix[T]) (*Matrix[T], error) {
+	if m.Cols != rhs.Rows {
+		return nil, fmt.Errorf("dimension mismatch: cannot multiply %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+	}
+	res := &Matrix[T]{Rows: m.Rows, Cols: rhs.Cols, Data: make([]T, m.Rows*rhs.Cols)}
+
+	const blockSize = 64
+	numWorkers := runtime.NumCPU()
+	if numWorkers < 1 || m.Rows*rhs.Cols < 4096 {
+		numWorkers = 1
+	}
+
+	if numWorkers == 1 {
+		for i0 := 0; i0 < m.Rows; i0 += blockSize {
+			iEnd := i0 + blockSize
+			if iEnd > m.Rows {
+				iEnd = m.Rows
+			}
+			for k0 := 0; k0 < m.Cols; k0 += blockSize {
+				kEnd := k0 + blockSize
+				if kEnd > m.Cols {
+					kEnd = m.Cols
+				}
+				for j0 := 0; j0 < rhs.Cols; j0 += blockSize {
+					jEnd := j0 + blockSize
+					if jEnd > rhs.Cols {
+						jEnd = rhs.Cols
+					}
+
+					for i := i0; i < iEnd; i++ {
+						for k := k0; k < kEnd; k++ {
+							temp := m.Data[i*m.Cols+k]
+							for j := j0; j < jEnd; j++ {
+								res.Data[i*rhs.Cols+j] += temp * rhs.Data[k*rhs.Cols+j]
+							}
+						}
+					}
+				}
+			}
+		}
+		return res, nil
+	}
+
+	var wg sync.WaitGroup
+	rowsPerWorker := (m.Rows + numWorkers - 1) / numWorkers
+
+	for w := 0; w < numWorkers; w++ {
+		rStart := w * rowsPerWorker
+		rEnd := rStart + rowsPerWorker
+		if rStart >= m.Rows {
+			break
+		}
+		if rEnd > m.Rows {
+			rEnd = m.Rows
+		}
+
+		wg.Add(1)
+		go func(rStart, rEnd int) {
+			defer wg.Done()
+			for i0 := rStart; i0 < rEnd; i0 += blockSize {
+				iSubEnd := i0 + blockSize
+				if iSubEnd > rEnd {
+					iSubEnd = rEnd
+				}
+				for k0 := 0; k0 < m.Cols; k0 += blockSize {
+					kEnd := k0 + blockSize
+					if kEnd > m.Cols {
+						kEnd = m.Cols
+					}
+					for j0 := 0; j0 < rhs.Cols; j0 += blockSize {
+						jEnd := j0 + blockSize
+						if jEnd > rhs.Cols {
+							jEnd = rhs.Cols
+						}
+
+						for i := i0; i < iSubEnd; i++ {
+							for k := k0; k < kEnd; k++ {
+								temp := m.Data[i*m.Cols+k]
+								for j := j0; j < jEnd; j++ {
+									res.Data[i*rhs.Cols+j] += temp * rhs.Data[k*rhs.Cols+j]
+								}
+							}
+						}
+					}
+				}
+			}
+		}(rStart, rEnd)
+	}
+	wg.Wait()
+	return res, nil
+}
+
 func (m *Matrix[T]) Transpose() *Matrix[T] {
 	res := &Matrix[T]{Rows: m.Cols, Cols: m.Rows, Data: make([]T, len(m.Data))}
-	for i := 0; i < m.Rows; i++ {
-		for j := 0; j < m.Cols; j++ {
-			res.Data[j*m.Rows+i] = m.Data[i*m.Cols+j]
+	const blockSize = 32
+	if m.Rows < blockSize || m.Cols < blockSize {
+		for i := 0; i < m.Rows; i++ {
+			for j := 0; j < m.Cols; j++ {
+				res.Data[j*m.Rows+i] = m.Data[i*m.Cols+j]
+			}
+		}
+		return res
+	}
+
+	for i0 := 0; i0 < m.Rows; i0 += blockSize {
+		iEnd := i0 + blockSize
+		if iEnd > m.Rows {
+			iEnd = m.Rows
+		}
+		for j0 := 0; j0 < m.Cols; j0 += blockSize {
+			jEnd := j0 + blockSize
+			if jEnd > m.Cols {
+				jEnd = m.Cols
+			}
+
+			for i := i0; i < iEnd; i++ {
+				for j := j0; j < jEnd; j++ {
+					res.Data[j*m.Rows+i] = m.Data[i*m.Cols+j]
+				}
+			}
 		}
 	}
 	return res
@@ -3074,21 +3179,65 @@ func (m *Matrix[T]) luDet() (T, error) {
 	if n == 0 {
 		return zero, nil
 	}
-	
-	a := make([][]complex128, n)
-	for i := 0; i < n; i++ {
-		a[i] = make([]complex128, n)
-		for j := 0; j < n; j++ {
-			a[i][j] = toComplex128(m.Data[i*n+j])
-		}
+
+	var isComplex bool
+	switch any(zero).(type) {
+	case complex128:
+		isComplex = true
 	}
-	
+
+	if !isComplex {
+		a := make([]float64, n*n)
+		for i := 0; i < len(m.Data); i++ {
+			a[i] = toFloat64(m.Data[i])
+		}
+		det := 1.0
+		for i := 0; i < n; i++ {
+			pivot := i
+			maxVal := math.Abs(a[i*n+i])
+			for k := i + 1; k < n; k++ {
+				if abs := math.Abs(a[k*n+i]); abs > maxVal {
+					maxVal = abs
+					pivot = k
+				}
+			}
+			if maxVal < 1e-15 {
+				return zero, nil
+			}
+			if pivot != i {
+				for col := 0; col < n; col++ {
+					a[i*n+col], a[pivot*n+col] = a[pivot*n+col], a[i*n+col]
+				}
+				det = -det
+			}
+			for j := i + 1; j < n; j++ {
+				factor := a[j*n+i] / a[i*n+i]
+				for k := i; k < n; k++ {
+					a[j*n+k] -= factor * a[i*n+k]
+				}
+			}
+			det *= a[i*n+i]
+		}
+		var typedDet T
+		switch any(zero).(type) {
+		case int64:
+			typedDet = any(int64(math.Round(det))).(T)
+		case float64:
+			typedDet = any(det).(T)
+		}
+		return typedDet, nil
+	}
+
+	a := make([]complex128, n*n)
+	for i := 0; i < len(m.Data); i++ {
+		a[i] = toComplex128(m.Data[i])
+	}
 	det := complex128(1.0)
 	for i := 0; i < n; i++ {
 		pivot := i
-		maxVal := cmplx.Abs(a[i][i])
+		maxVal := cmplx.Abs(a[i*n+i])
 		for k := i + 1; k < n; k++ {
-			if abs := cmplx.Abs(a[k][i]); abs > maxVal {
+			if abs := cmplx.Abs(a[k*n+i]); abs > maxVal {
 				maxVal = abs
 				pivot = k
 			}
@@ -3097,50 +3246,79 @@ func (m *Matrix[T]) luDet() (T, error) {
 			return zero, nil
 		}
 		if pivot != i {
-			a[i], a[pivot] = a[pivot], a[i]
+			for col := 0; col < n; col++ {
+				a[i*n+col], a[pivot*n+col] = a[pivot*n+col], a[i*n+col]
+			}
 			det = -det
 		}
 		for j := i + 1; j < n; j++ {
-			factor := a[j][i] / a[i][i]
+			factor := a[j*n+i] / a[i*n+i]
 			for k := i; k < n; k++ {
-				a[j][k] -= factor * a[i][k]
+				a[j*n+k] -= factor * a[i*n+k]
 			}
 		}
-		det *= a[i][i]
+		det *= a[i*n+i]
 	}
-	
-	var typedDet T
-	switch any(zero).(type) {
-	case int64:
-		typedDet = any(int64(math.Round(real(det)))).(T)
-	case float64:
-		typedDet = any(real(det)).(T)
-	case complex128:
-		typedDet = any(det).(T)
-	}
-	return typedDet, nil
+	return any(det).(T), nil
 }
 
 func (m *Matrix[T]) rank() int {
 	if m.Rows == 0 || m.Cols == 0 {
 		return 0
 	}
-	rows := m.Rows
-	cols := m.Cols
-	
-	a := make([][]complex128, rows)
-	for i := 0; i < rows; i++ {
-		a[i] = make([]complex128, cols)
-		for j := 0; j < cols; j++ {
-			a[i][j] = toComplex128(m.Data[i*cols+j])
-		}
+	rows, cols := m.Rows, m.Cols
+	var zero T
+	var isComplex bool
+	switch any(zero).(type) {
+	case complex128:
+		isComplex = true
 	}
-	
+
+	if !isComplex {
+		a := make([]float64, rows*cols)
+		for i := 0; i < len(m.Data); i++ {
+			a[i] = toFloat64(m.Data[i])
+		}
+		rank := 0
+		for col := 0; col < cols; col++ {
+			pivot := -1
+			for row := rank; row < rows; row++ {
+				if math.Abs(a[row*cols+col]) > 1e-12 {
+					pivot = row
+					break
+				}
+			}
+			if pivot == -1 {
+				continue
+			}
+			if pivot != rank {
+				for c := 0; c < cols; c++ {
+					a[rank*cols+c], a[pivot*cols+c] = a[pivot*cols+c], a[rank*cols+c]
+				}
+			}
+			for row := rank + 1; row < rows; row++ {
+				factor := a[row*cols+col] / a[rank*cols+col]
+				for c := col; c < cols; c++ {
+					a[row*cols+c] -= factor * a[rank*cols+c]
+				}
+			}
+			rank++
+			if rank == rows {
+				break
+			}
+		}
+		return rank
+	}
+
+	a := make([]complex128, rows*cols)
+	for i := 0; i < len(m.Data); i++ {
+		a[i] = toComplex128(m.Data[i])
+	}
 	rank := 0
 	for col := 0; col < cols; col++ {
 		pivot := -1
 		for row := rank; row < rows; row++ {
-			if cmplx.Abs(a[row][col]) > 1e-12 {
+			if cmplx.Abs(a[row*cols+col]) > 1e-12 {
 				pivot = row
 				break
 			}
@@ -3148,11 +3326,15 @@ func (m *Matrix[T]) rank() int {
 		if pivot == -1 {
 			continue
 		}
-		a[rank], a[pivot] = a[pivot], a[rank]
+		if pivot != rank {
+			for c := 0; c < cols; c++ {
+				a[rank*cols+c], a[pivot*cols+c] = a[pivot*cols+c], a[rank*cols+c]
+			}
+		}
 		for row := rank + 1; row < rows; row++ {
-			factor := a[row][col] / a[rank][col]
+			factor := a[row*cols+col] / a[rank*cols+col]
 			for c := col; c < cols; c++ {
-				a[row][c] -= factor * a[rank][c]
+				a[row*cols+c] -= factor * a[rank*cols+c]
 			}
 		}
 		rank++
