@@ -5,6 +5,7 @@ import "sort"
 import "time"
 import "os"
 import "github.com/2dprototype/tender/v/colorable"
+import "math"
 import "math/big"
 
 var builtinFuncs []*NativeFunction
@@ -67,6 +68,7 @@ func init() {
 	addBuiltinFunction("is_struct", builtinIsStruct, false)
 	addBuiltinFunction("range",  builtinRange, false)
 	addBuiltinFunction("freeze",  builtinFreeze, false)
+	addBuiltinFunction("matrix", builtinMatrix, false)
 }
 
 // GetAllBuiltinFunctions returns all builtin function objects.
@@ -1511,4 +1513,136 @@ func parseNumber(s string) (int64, int) {
 		i++
 	}
 	return num, i
+}
+
+
+func builtinMatrix(args ...Object) (Object, error) {
+	argsLen := len(args)
+
+	// 1. Zero matrix: matrix(rows, cols)
+	if argsLen == 2 {
+		rows, rowsOk := ToInt(args[0])
+		cols, colsOk := ToInt(args[1])
+		if !rowsOk || !colsOk {
+			return nil, ErrInvalidArgumentType{
+				Name:     "arguments",
+				Expected: "int, int",
+				Found:    "non-integer",
+			}
+		}
+		if rows <= 0 || cols <= 0 {
+			return nil, fmt.Errorf("matrix dimensions must be positive, got %d, %d", rows, cols)
+		}
+		data := make([]float64, rows*cols)
+		return &Matrix{
+			Rows: rows,
+			Cols: cols,
+			Data: data,
+		}, nil
+	}
+
+	// 2. Single argument cases
+	if argsLen == 1 {
+		arg := args[0]
+
+		// 2a. 2D array → matrix([[1,2],[3,4]])
+		if arr, ok := arg.(*Array); ok {
+			// Check if it's a 2D array (first element is also an Array)
+			if len(arr.Value) == 0 {
+				return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
+			}
+			if _, ok := arr.Value[0].(*Array); ok {
+				// It's a 2D array
+				rows := len(arr.Value)
+				firstRow, _ := arr.Value[0].(*Array)
+				cols := len(firstRow.Value)
+				if rows == 0 || cols == 0 {
+					return &Matrix{Rows: rows, Cols: cols, Data: []float64{}}, nil
+				}
+				data := make([]float64, rows*cols)
+				for i, rowObj := range arr.Value {
+					row, ok := rowObj.(*Array)
+					if !ok {
+						return nil, fmt.Errorf("matrix row %d is not an array", i)
+					}
+					if len(row.Value) != cols {
+						return nil, fmt.Errorf("matrix row %d has length %d, expected %d", i, len(row.Value), cols)
+					}
+					for j, elem := range row.Value {
+						val, ok := ToFloat64(elem)
+						if !ok {
+							return nil, fmt.Errorf("matrix element at [%d][%d] is not a number", i, j)
+						}
+						data[i*cols+j] = val
+					}
+				}
+				return &Matrix{
+					Rows: rows,
+					Cols: cols,
+					Data: data,
+				}, nil
+			}
+
+			// 2b. 1D array → automatic square matrix with padding
+			// Compute smallest n such that n*n >= len(arr.Value)
+			n := int(math.Ceil(math.Sqrt(float64(len(arr.Value)))))
+			if n == 0 {
+				return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
+			}
+			data := make([]float64, n*n)
+			// Fill with values from the array (row‑major)
+			for i, obj := range arr.Value {
+				if i >= n*n {
+					break // should not happen, but safe
+				}
+				val, ok := ToFloat64(obj)
+				if !ok {
+					return nil, fmt.Errorf("matrix element at index %d is not a number", i)
+				}
+				data[i] = val
+			}
+			// Remaining elements stay zero (already zero-initialized)
+			return &Matrix{
+				Rows: n,
+				Cols: n,
+				Data: data,
+			}, nil
+		}
+
+		// 2c. Diagonal matrix: matrix(5) or matrix(5, diag) handled below
+		// Actually, diagonal matrix uses two arguments, so we don't handle it here.
+	}
+
+	// 3. Diagonal matrix: matrix(size, diagVal) 
+	if argsLen == 2 {
+		size, sizeOk := ToInt(args[0])
+		if sizeOk && size > 0 {
+			var diagVal float64 = 1.0
+			if val, ok := ToFloat64(args[1]); ok {
+				diagVal = val
+			} else {
+				return nil, ErrInvalidArgumentType{
+					Name:     "second",
+					Expected: "number",
+					Found:    args[1].TypeName(),
+				}
+			}
+			data := make([]float64, size*size)
+			for i := 0; i < size; i++ {
+				data[i*size+i] = diagVal
+			}
+			return &Matrix{
+				Rows: size,
+				Cols: size,
+				Data: data,
+			}, nil
+		}
+	}
+
+	// 4. No args → empty matrix
+	if argsLen == 0 {
+		return &Matrix{Rows: 0, Cols: 0, Data: []float64{}}, nil
+	}
+
+	return nil, ErrWrongNumArguments
 }

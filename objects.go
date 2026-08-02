@@ -2594,3 +2594,561 @@ func (o *BoundMethod) Call(args ...Object) (Object, error) {
 	copy(newArgs[1:], args)
 	return o.Func.Call(newArgs...)
 }
+
+// Matrix represents a 2D matrix of float64 values.
+type Matrix struct {
+	ObjectImpl
+	Rows int
+	Cols int
+	Data []float64
+}
+
+// TypeName returns the type name.
+func (m *Matrix) TypeName() string {
+	return "matrix"
+}
+
+// String returns a human‑readable, column‑aligned matrix representation.
+func (m *Matrix) String() string {
+	if m.Rows == 0 || m.Cols == 0 {
+		return "[]"
+	}
+	
+	// Helper to format a float with 2 decimal places only if needed
+	formatFloat := func(val float64) string {
+		// Check if the value is effectively an integer (within floating point tolerance)
+		if math.Abs(val-math.Round(val)) < 1e-9 {
+			return fmt.Sprintf("%.0f", val)
+		}
+		return fmt.Sprintf("%.2f", val)
+	}
+	
+	// First pass: compute column widths
+	colWidths := make([]int, m.Cols)
+	for i := 0; i < m.Rows; i++ {
+		for j := 0; j < m.Cols; j++ {
+			valStr := formatFloat(m.Data[i*m.Cols+j])
+			if len(valStr) > colWidths[j] {
+				colWidths[j] = len(valStr)
+			}
+		}
+	}
+	
+	// Second pass: build the string
+	var sb strings.Builder
+	for i := 0; i < m.Rows; i++ {
+		sb.WriteString("│")
+		for j := 0; j < m.Cols; j++ {
+			valStr := formatFloat(m.Data[i*m.Cols+j])
+			sb.WriteString(valStr)
+			padding := colWidths[j] - len(valStr)
+			if padding > 0 {
+				sb.WriteString(strings.Repeat(" ", padding))
+			}
+			if j < m.Cols-1 {
+				sb.WriteString(" ")
+			}
+		}
+		sb.WriteString("│")
+		if i < m.Rows-1 {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// Copy returns a deep copy of the matrix.
+func (m *Matrix) Copy() Object {
+	newData := make([]float64, len(m.Data))
+	copy(newData, m.Data)
+	return &Matrix{
+		Rows: m.Rows,
+		Cols: m.Cols,
+		Data: newData,
+	}
+}
+
+// IsFalsy returns true if the matrix has no elements.
+func (m *Matrix) IsFalsy() bool {
+	return len(m.Data) == 0
+}
+
+// BinaryOp implements matrix + matrix, - matrix, * matrix, and scalar +, -, *, /.
+func (m *Matrix) BinaryOp(op token.Token, rhs Object) (Object, error) {
+	switch rhs := rhs.(type) {
+	case *Matrix:
+		switch op {
+		case token.Add:
+			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot add %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			}
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] + rhs.Data[i]
+			}
+			return res, nil
+
+		case token.Sub:
+			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot subtract %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			}
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] - rhs.Data[i]
+			}
+			return res, nil
+
+		case token.Mul:
+			if m.Cols != rhs.Rows {
+				return nil, fmt.Errorf("dimension mismatch: cannot multiply %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			}
+			res := &Matrix{Rows: m.Rows, Cols: rhs.Cols, Data: make([]float64, m.Rows*rhs.Cols)}
+			for i := 0; i < m.Rows; i++ {
+				for k := 0; k < m.Cols; k++ {
+					temp := m.Data[i*m.Cols+k]
+					for j := 0; j < rhs.Cols; j++ {
+						res.Data[i*rhs.Cols+j] += temp * rhs.Data[k*rhs.Cols+j]
+					}
+				}
+			}
+			return res, nil
+
+		case token.Quo:
+			// Element‑wise division (Hadamard division), not matrix division
+			if m.Rows != rhs.Rows || m.Cols != rhs.Cols {
+				return nil, fmt.Errorf("dimension mismatch: cannot element‑wise divide %dx%d and %dx%d", m.Rows, m.Cols, rhs.Rows, rhs.Cols)
+			}
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				if rhs.Data[i] == 0 {
+					res.Data[i] = math.Inf(1)
+				} else {
+					res.Data[i] = m.Data[i] / rhs.Data[i]
+				}
+			}
+			return res, nil
+		}
+
+	case *Float:
+		scalar := rhs.Value
+		switch op {
+		case token.Add:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] + scalar
+			}
+			return res, nil
+		case token.Sub:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] - scalar
+			}
+			return res, nil
+		case token.Mul:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] * scalar
+			}
+			return res, nil
+		case token.Quo:
+			if scalar == 0 {
+				return nil, fmt.Errorf("division by zero scalar")
+			}
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] / scalar
+			}
+			return res, nil
+		}
+
+	case *Int:
+		scalar := float64(rhs.Value)
+		switch op {
+		case token.Add:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] + scalar
+			}
+			return res, nil
+		case token.Sub:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] - scalar
+			}
+			return res, nil
+		case token.Mul:
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] * scalar
+			}
+			return res, nil
+		case token.Quo:
+			if scalar == 0 {
+				return nil, fmt.Errorf("division by zero scalar")
+			}
+			res := &Matrix{Rows: m.Rows, Cols: m.Cols, Data: make([]float64, len(m.Data))}
+			for i := range m.Data {
+				res.Data[i] = m.Data[i] / scalar
+			}
+			return res, nil
+		}
+	}
+	return nil, ErrInvalidOperator
+}
+
+// IndexGet handles properties, methods, and row view retrieval.
+func (m *Matrix) IndexGet(index Object) (Object, error) {
+	if strIdx, ok := index.(*String); ok {
+		switch strIdx.Value {
+		// Basic properties
+		case "rows":
+			return &Int{Value: int64(m.Rows)}, nil
+		case "cols":
+			return &Int{Value: int64(m.Cols)}, nil
+		case "shape":
+			return &Tuple{Value: []Object{&Int{Value: int64(m.Rows)}, &Int{Value: int64(m.Cols)}}}, nil
+		case "is_square":
+			return FromBool(m.Rows == m.Cols), nil
+
+		// Diagonal
+		case "diag":
+			if m.Rows != m.Cols {
+				return nil, fmt.Errorf("diagonal is only defined for square matrices")
+			}
+			diag := make([]Object, m.Rows)
+			for i := 0; i < m.Rows; i++ {
+				diag[i] = &Float{Value: m.Data[i*m.Cols+i]}
+			}
+			return &Array{Value: diag}, nil
+
+		// Flattened view
+		case "flatten":
+			arr := make([]Object, len(m.Data))
+			for i, v := range m.Data {
+				arr[i] = &Float{Value: v}
+			}
+			return &Array{Value: arr}, nil
+
+		// Statistics
+		case "sum":
+			var sum float64
+			for _, v := range m.Data {
+				sum += v
+			}
+			return &Float{Value: sum}, nil
+		case "mean":
+			if len(m.Data) == 0 {
+				return &Float{Value: 0}, nil
+			}
+			var sum float64
+			for _, v := range m.Data {
+				sum += v
+			}
+			return &Float{Value: sum / float64(len(m.Data))}, nil
+		case "min":
+			if len(m.Data) == 0 {
+				return &Float{Value: 0}, nil
+			}
+			min := m.Data[0]
+			for _, v := range m.Data[1:] {
+				if v < min {
+					min = v
+				}
+			}
+			return &Float{Value: min}, nil
+		case "max":
+			if len(m.Data) == 0 {
+				return &Float{Value: 0}, nil
+			}
+			max := m.Data[0]
+			for _, v := range m.Data[1:] {
+				if v > max {
+					max = v
+				}
+			}
+			return &Float{Value: max}, nil
+		case "rank":
+			return &Float{Value: float64(m.rank())}, nil
+
+		// Determinant (LU decomposition, O(n³))
+		case "det":
+			if m.Rows != m.Cols {
+				return nil, fmt.Errorf("determinant is only defined for square matrices")
+			}
+			det, err := m.luDet()
+			if err != nil {
+				return nil, err
+			}
+			return &Float{Value: det}, nil
+
+		// Trace
+		case "trace":
+			if m.Rows != m.Cols {
+				return nil, fmt.Errorf("trace is only defined for square matrices")
+			}
+			var sum float64
+			for i := 0; i < m.Rows; i++ {
+				sum += m.Data[i*m.Cols+i]
+			}
+			return &Float{Value: sum}, nil
+
+		// Transpose
+		case "T":
+			return m.Transpose(), nil
+
+		// Methods: row, col
+		case "row":
+			return &NativeFunction{
+				Name: "row",
+				Value: func(args ...Object) (Object, error) {
+					if len(args) != 1 {
+						return nil, ErrWrongNumArguments
+					}
+					i, ok := ToInt(args[0])
+					if !ok {
+						return nil, fmt.Errorf("row index must be an integer")
+					}
+					if i < 0 || i >= m.Rows {
+						return nil, fmt.Errorf("row index out of bounds")
+					}
+					row := make([]Object, m.Cols)
+					for j := 0; j < m.Cols; j++ {
+						row[j] = &Float{Value: m.Data[i*m.Cols+j]}
+					}
+					return &Array{Value: row}, nil
+				},
+			}, nil
+		case "col":
+			return &NativeFunction{
+				Name: "col",
+				Value: func(args ...Object) (Object, error) {
+					if len(args) != 1 {
+						return nil, ErrWrongNumArguments
+					}
+					j, ok := ToInt(args[0])
+					if !ok {
+						return nil, fmt.Errorf("column index must be an integer")
+					}
+					if j < 0 || j >= m.Cols {
+						return nil, fmt.Errorf("column index out of bounds")
+					}
+					col := make([]Object, m.Rows)
+					for i := 0; i < m.Rows; i++ {
+						col[i] = &Float{Value: m.Data[i*m.Cols+j]}
+					}
+					return &Array{Value: col}, nil
+				},
+			}, nil
+		}
+		// Unknown property → return nil (no error)
+		return nil, nil
+	}
+
+	// Row view for integer index
+	if intIdx, ok := index.(*Int); ok {
+		row := int(intIdx.Value)
+		if row < 0 || row >= m.Rows {
+			return nil, fmt.Errorf("row index out of bounds")
+		}
+		return &rowView{matrix: m, row: row}, nil
+	}
+	return nil, ErrInvalidIndexType
+}
+
+// IndexSet is not used directly; assignment goes via rowView.
+func (m *Matrix) IndexSet(index, value Object) error {
+	return fmt.Errorf("matrix element assignment must use m[i][j] = val")
+}
+
+// Transpose returns a new matrix with rows and columns swapped.
+func (m *Matrix) Transpose() *Matrix {
+	res := &Matrix{Rows: m.Cols, Cols: m.Rows, Data: make([]float64, len(m.Data))}
+	for i := 0; i < m.Rows; i++ {
+		for j := 0; j < m.Cols; j++ {
+			res.Data[j*m.Rows+i] = m.Data[i*m.Cols+j]
+		}
+	}
+	return res
+}
+
+// ---------------------------------------------------------------------
+// Determinant using LU decomposition with partial pivoting
+// O(n³) time, numerically stable, works for singular matrices (det = 0)
+// ---------------------------------------------------------------------
+
+func (m *Matrix) luDet() (float64, error) {
+	n := m.Rows
+	if n == 0 {
+		return 0, nil
+	}
+	// Make a copy to avoid modifying the original
+	a := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		a[i] = make([]float64, n)
+		for j := 0; j < n; j++ {
+			a[i][j] = m.Data[i*n+j]
+		}
+	}
+	det := 1.0
+	for i := 0; i < n; i++ {
+		// Find pivot
+		pivot := i
+		maxVal := math.Abs(a[i][i])
+		for k := i + 1; k < n; k++ {
+			if abs := math.Abs(a[k][i]); abs > maxVal {
+				maxVal = abs
+				pivot = k
+			}
+		}
+		if maxVal < 1e-15 {
+			// Matrix is singular (or nearly)
+			return 0, nil
+		}
+		// Swap rows if needed
+		if pivot != i {
+			a[i], a[pivot] = a[pivot], a[i]
+			det = -det
+		}
+		// Eliminate below
+		for j := i + 1; j < n; j++ {
+			factor := a[j][i] / a[i][i]
+			for k := i; k < n; k++ {
+				a[j][k] -= factor * a[i][k]
+			}
+		}
+		// Multiply det by pivot (diagonal element)
+		det *= a[i][i]
+	}
+	return det, nil
+}
+
+// rank computes the rank using Gaussian elimination.
+func (m *Matrix) rank() int {
+	if m.Rows == 0 || m.Cols == 0 {
+		return 0
+	}
+	// Copy matrix
+	rows := m.Rows
+	cols := m.Cols
+	a := make([][]float64, rows)
+	for i := 0; i < rows; i++ {
+		a[i] = make([]float64, cols)
+		for j := 0; j < cols; j++ {
+			a[i][j] = m.Data[i*cols+j]
+		}
+	}
+	rank := 0
+	for col := 0; col < cols; col++ {
+		// Find pivot row
+		pivot := -1
+		for row := rank; row < rows; row++ {
+			if math.Abs(a[row][col]) > 1e-12 {
+				pivot = row
+				break
+			}
+		}
+		if pivot == -1 {
+			continue
+		}
+		// Swap current row with pivot row
+		a[rank], a[pivot] = a[pivot], a[rank]
+		// Eliminate rows below
+		for row := rank + 1; row < rows; row++ {
+			factor := a[row][col] / a[rank][col]
+			for c := col; c < cols; c++ {
+				a[row][c] -= factor * a[rank][c]
+			}
+		}
+		rank++
+		if rank == rows {
+			break
+		}
+	}
+	return rank
+}
+
+// Determinant (legacy wrapper) – kept for compatibility
+func (m *Matrix) Determinant() (Object, error) {
+	return m.detFromIndex()
+}
+
+func (m *Matrix) detFromIndex() (Object, error) {
+	if m.Rows != m.Cols {
+		return nil, fmt.Errorf("determinant is only defined for square matrices")
+	}
+	det, err := m.luDet()
+	if err != nil {
+		return nil, err
+	}
+	return &Float{Value: det}, nil
+}
+
+// Trace returns the trace (as Object).
+func (m *Matrix) Trace() (Object, error) {
+	if m.Rows != m.Cols {
+		return nil, fmt.Errorf("trace is only defined for square matrices")
+	}
+	var sum float64
+	for i := 0; i < m.Rows; i++ {
+		sum += m.Data[i*m.Cols+i]
+	}
+	return &Float{Value: sum}, nil
+}
+
+// ---- rowView: mutable row slice ----
+type rowView struct {
+	ObjectImpl
+	matrix *Matrix
+	row    int
+}
+
+func (rv *rowView) TypeName() string { return "row-view" }
+
+func (rv *rowView) String() string {
+	rowData := make([]string, rv.matrix.Cols)
+	for j := 0; j < rv.matrix.Cols; j++ {
+		rowData[j] = fmt.Sprintf("%g", rv.matrix.Data[rv.row*rv.matrix.Cols+j])
+	}
+	return "[" + strings.Join(rowData, ", ") + "]"
+}
+
+func (rv *rowView) Copy() Object {
+	return &rowView{matrix: rv.matrix, row: rv.row}
+}
+
+func (rv *rowView) Equals(another Object) bool {
+	return false
+}
+
+func (rv *rowView) IndexGet(index Object) (Object, error) {
+	if intIdx, ok := index.(*Int); ok {
+		col := int(intIdx.Value)
+		if col < 0 || col >= rv.matrix.Cols {
+			return nil, fmt.Errorf("column index out of bounds")
+		}
+		return &Float{Value: rv.matrix.Data[rv.row*rv.matrix.Cols+col]}, nil
+	}
+	return nil, ErrInvalidIndexType
+}
+
+func (rv *rowView) IndexSet(index, value Object) error {
+	intIdx, ok := index.(*Int)
+	if !ok {
+		return ErrInvalidIndexType
+	}
+	col := int(intIdx.Value)
+	if col < 0 || col >= rv.matrix.Cols {
+		return fmt.Errorf("column index out of bounds")
+	}
+	var val float64
+	switch v := value.(type) {
+	case *Float:
+		val = v.Value
+	case *Int:
+		val = float64(v.Value)
+	default:
+		return fmt.Errorf("can only assign numeric values to matrix elements")
+	}
+	rv.matrix.Data[rv.row*rv.matrix.Cols+col] = val
+	return nil
+}
