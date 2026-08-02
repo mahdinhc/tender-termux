@@ -268,7 +268,13 @@ func FormatErrorFrame(fileSet *SourceFileSet, pos Pos, endPos Pos) string {
 	if endPos != NoPos && endPos > pos {
 		// Limit span to the end of the current line
 		nodeOffset := file.Offset(pos)
-		nodeEndOffset := file.Offset(endPos)
+		
+		// Safely determine the end offset to prevent bounds panic
+		nodeEndOffset := file.Size 
+		if int(endPos) <= file.Base+file.Size {
+			nodeEndOffset = file.Offset(endPos)
+		}
+
 		if nodeEndOffset > startOffset && nodeEndOffset <= endOffset {
 			spanLen = nodeEndOffset - nodeOffset
 		} else if nodeEndOffset > endOffset {
