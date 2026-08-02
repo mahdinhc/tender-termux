@@ -1328,60 +1328,44 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				if len(args) != 2 {
 					return nil, tender.ErrInvalidArgCount
 				}
-				path, ok := args[0].(*tender.String)
-				if !ok {
-					return nil, tender.ErrInvalidArgument
+				data, err := ToFileData(args[0])
+				if err != nil {
+					return nil, err
 				}
 				size := toFloat32(args[1])
-
-				fontBytes, err := os.ReadFile(tender.ResolvePath(path.Value))
+				f, err := truetype.Parse(data)
 				if err != nil {
-					return nil, err
+					return wrapError(err), nil
 				}
-				f, err := truetype.Parse(fontBytes)
-				if err != nil {
-					return nil, err
-				}
-				face := truetype.NewFace(f, &truetype.Options{
-					Size: float64(size),
-				})
+				face := truetype.NewFace(f, &truetype.Options{Size: float64(size)})
 				state.Font = f
 				state.FontFace = face
 				state.FontSize = float64(size)
-
 				return tender.NullValue, nil
 			},
 		},
-		"load_font_face": &tender.NativeFunction{
-			Name: "load_font_face",
-			Value: func(args ...tender.Object) (tender.Object, error) {
-				if len(args) != 2 {
-					return nil, tender.ErrInvalidArgCount
-				}
-				path, ok := args[0].(*tender.String)
-				if !ok {
-					return nil, tender.ErrInvalidArgument
-				}
-				size := toFloat32(args[1])
-
-				fontBytes, err := os.ReadFile(tender.ResolvePath(path.Value))
-				if err != nil {
-					return nil, err
-				}
-				f, err := truetype.Parse(fontBytes)
-				if err != nil {
-					return nil, err
-				}
-				face := truetype.NewFace(f, &truetype.Options{
-					Size: float64(size),
-				})
-				state.Font = f
-				state.FontFace = face
-				state.FontSize = float64(size)
-
-				return tender.NullValue, nil
-			},
-		},
+		// "load_font_face": &tender.NativeFunction{
+			// Name: "load_font_face",
+			// Value: func(args ...tender.Object) (tender.Object, error) {
+				// if len(args) != 2 {
+					// return nil, tender.ErrInvalidArgCount
+				// }
+				// data, err := ToFileData(args[0])
+				// if err != nil {
+					// return nil, err
+				// }
+				// size := toFloat32(args[1])
+				// f, err := truetype.Parse(data)
+				// if err != nil {
+					// return wrapError(err), nil
+				// }
+				// face := truetype.NewFace(f, &truetype.Options{Size: float64(size)})
+				// state.Font = f
+				// state.FontFace = face
+				// state.FontSize = float64(size)
+				// return tender.NullValue, nil
+			// },
+		// },
 		"set_font_size": &tender.NativeFunction{
 			Name: "set_font_size",
 			Value: func(args ...tender.Object) (tender.Object, error) {

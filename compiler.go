@@ -695,7 +695,7 @@ func (c *Compiler) Compile(node parser.Node) error {
 		if err != nil {
 			return c.errorf(node, "embeding file \"" + src + "\" not found!")
 		}
-		c.emit(node, parser.OpConstant, c.addConstant(&String{Value: string(data)}))
+		c.emit(node, parser.OpConstant, c.addConstant(&Bytes{Value: data}))
 	case *parser.ImportExpr:
 		if node.ModuleName == "" {
 			return c.errorf(node, "empty module name")

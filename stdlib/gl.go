@@ -4,6 +4,7 @@ package stdlib
 
 import (
 	"os"
+	"bytes"
 	"image"
 	"image/color"
 	"unsafe"
@@ -3143,12 +3144,19 @@ var glModule = map[string]tender.Object{
 	"load_obj": &tender.NativeFunction{
 		Name: "load_obj",
 		Value: func(args ...tender.Object) (tender.Object, error) {
-			if len(args) != 1 { return nil, tender.ErrInvalidArgCount }
-			path, ok := args[0].(*tender.String)
-			if !ok { return nil, tender.ErrInvalidArgument }
+			if len(args) != 1 {
+				return nil, tender.ErrInvalidArgCount
+			}
 			
-			mesh, err := LoadOBJ(tender.ResolvePath(path.Value))
-			if err != nil { return nil, err }
+			data, err := ToFileData(args[0])
+			if err != nil {
+				return nil, err
+			}
+			
+			mesh, err := ParseOBJ(data)
+			if err != nil {
+				return wrapError(err), nil
+			}
 			
 			// Passing nil for materials compiles the mesh exactly as it did before
 			return &tender.Int{Value: int64(compileMeshToDisplayList(mesh, nil))}, nil
@@ -3174,9 +3182,12 @@ var glModule = map[string]tender.Object{
 			for _, mat := range materials {
 				if mat.DiffuseMap != "" {
 					resolvedTexPath := tender.ResolvePathFromDir(mat.DiffuseMap, mtlDir)
-					texID, err := internalLoadTexture(resolvedTexPath)
+					texData, err := os.ReadFile(resolvedTexPath)
 					if err == nil {
-						mat.TextureID = texID
+						texID, err := internalLoadTexture(texData)
+						if err == nil {
+							mat.TextureID = texID
+						}
 					}
 				}
 			}
@@ -3207,14 +3218,17 @@ var glModule = map[string]tender.Object{
 	"load_texture": &tender.NativeFunction{
 		Name: "load_texture",
 		Value: func(args ...tender.Object) (tender.Object, error) {
-			if len(args) != 1 { return nil, tender.ErrInvalidArgCount }
-			
-			path, ok := args[0].(*tender.String)
-			if !ok { return nil, tender.ErrInvalidArgument }
-			
-			texID, err := internalLoadTexture(tender.ResolvePath(path.Value))
-			if err != nil { return nil, err }
-			
+			if len(args) != 1 {
+				return nil, tender.ErrInvalidArgCount
+			}
+			data, err := ToFileData(args[0])
+			if err != nil {
+				return nil, err
+			}
+			texID, err := internalLoadTexture(data)
+			if err != nil {
+				return wrapError(err), nil
+			}
 			return &tender.Int{Value: int64(texID)}, nil
 		},
 	},
@@ -3240,13 +3254,11 @@ var glModule = map[string]tender.Object{
 }
 
 // internalLoadTexture skips script reflection and returns the raw uint32 texture ID.
-func internalLoadTexture(path string) (uint32, error) {
-	file, err := os.Open(path)
-	if err != nil { return 0, err }
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
-	if err != nil { return 0, err }
+func internalLoadTexture(data []byte) (uint32, error) {
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return 0, err
+	}
 
 	bounds := img.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()

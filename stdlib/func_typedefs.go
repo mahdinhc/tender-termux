@@ -2,6 +2,7 @@ package stdlib
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/2dprototype/tender"
@@ -1863,5 +1864,23 @@ func FuncAf64iiR(fn func(float64, int, int) ) tender.CallableFunc {
 		i2, _ := tender.ToInt(args[2])
 		fn(f1, i1, i2)
 		return nil, nil
+	}
+}
+
+// ToFileData returns the raw bytes from an Object that is either a string (file path)
+// or bytes (already loaded data). If the object is a string, it resolves the path
+// (using tender.ResolvePath) and reads the file. Otherwise, it returns the bytes as-is.
+func ToFileData(obj tender.Object) ([]byte, error) {
+	switch v := obj.(type) {
+	case *tender.String:
+		return os.ReadFile(tender.ResolvePath(v.Value))
+	case *tender.Bytes:
+		return v.Value, nil
+	default:
+		return nil, tender.ErrInvalidArgumentType{
+			Name:     "file input",
+			Expected: "string (path) or bytes",
+			Found:    obj.TypeName(),
+		}
 	}
 }

@@ -131,6 +131,7 @@ func (b *Bytecode) RemoveDuplicates() {
 	complexs := make(map[complex128]int)
 	chars := make(map[rune]int)
 	immutableMaps := make(map[string]int) // for modules
+	bytesMap := make(map[string]int)
 
 	for curIdx, c := range b.Constants {
 		switch c := c.(type) {
@@ -193,6 +194,16 @@ func (b *Bytecode) RemoveDuplicates() {
 			} else {
 				newIdx = len(deduped)
 				strings[c.Value] = newIdx
+				indexMap[curIdx] = newIdx
+				deduped = append(deduped, c)
+			}
+		case *Bytes:
+			key := string(c.Value)         // convert to string for map key
+			if newIdx, ok := bytesMap[key]; ok {
+				indexMap[curIdx] = newIdx
+			} else {
+				newIdx := len(deduped)
+				bytesMap[key] = newIdx
 				indexMap[curIdx] = newIdx
 				deduped = append(deduped, c)
 			}

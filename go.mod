@@ -33,5 +33,6 @@ require (
 	github.com/oakmound/w32 v2.0.0+incompatible // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
+	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9 // indirect
 	golang.org/x/net v0.21.0 // indirect
 )

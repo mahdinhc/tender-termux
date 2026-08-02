@@ -57,27 +57,14 @@ func imageLoad(args ...tender.Object) (tender.Object, error) {
 	if len(args) != 1 {
 		return nil, tender.ErrWrongNumArguments
 	}
-
-	path, ok := tender.ToString(args[0])
-	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "path",
-			Expected: "string",
-			Found:    args[0].TypeName(),
-		}
-	}
-
-	file, err := os.Open(tender.ResolvePath(path))
+	data, err := ToFileData(args[0])
 	if err != nil {
 		return wrapError(err), nil
 	}
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return wrapError(err), nil
 	}
-
 	return makeImage(img), nil
 }
 
