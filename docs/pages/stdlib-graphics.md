@@ -432,9 +432,9 @@ Registers a callback function for continuous updates.
 
 ### `on_key(callback)`
 
-Registers a callback for keyboard events.
+Registers a callback for keyboard events (keypress / keydown).
 
-- **Parameters**: `callback` - Function receiving (key, x, y)
+- **Parameters**: `callback` - Function receiving `(key, x, y)`
 - **Returns**: `null`
 - **Example**:
   ```go
@@ -447,11 +447,39 @@ Registers a callback for keyboard events.
 
 Special keys are reported as strings: `"left"`, `"right"`, `"up"`, `"down"`, `"page_up"`, `"page_down"`, `"home"`, `"end"`, `"insert"`, `"f1"` through `"f12"`.
 
+### `on_keydown(callback)`
+
+Registers a callback fired specifically when a key is pressed down.
+
+- **Parameters**: `callback` - Function receiving `(key, x, y)`
+- **Returns**: `null`
+
+### `on_keyup(callback)`
+
+Registers a callback fired when a key is released.
+
+- **Parameters**: `callback` - Function receiving `(key, x, y)`
+- **Returns**: `null`
+
+### `on_key_hold(callback)` (or `on_keyhold`)
+
+Registers a callback fired every frame for each key currently held down.
+
+- **Parameters**: `callback` - Function receiving `(key)`
+- **Returns**: `null`
+
+### `is_key_down(key_name)` (or `is_key_pressed`)
+
+Queries whether a key is currently held down.
+
+- **Parameters**: `key_name` - String key identifier (e.g. `"w"`, `"left"`, `"space"`)
+- **Returns**: `true` if held down, `false` otherwise
+
 ### `on_mouse(callback)`
 
-Registers a callback for mouse button events.
+Registers a callback for general mouse button events.
 
-- **Parameters**: `callback` - Function receiving (button, action, x, y)
+- **Parameters**: `callback` - Function receiving `(button, action, x, y)`
 - **Returns**: `null`
 - **Example**:
   ```go
@@ -465,9 +493,54 @@ Registers a callback for mouse button events.
 Button names: `"left"`, `"middle"`, `"right"`
 Actions: `"down"`, `"up"`
 
-### `on_mouse_move(callback)`
+### `on_mousedown(callback)`
+
+Registers a callback fired when a mouse button is pressed down.
+
+- **Parameters**: `callback` - Function receiving `(button, x, y)`
+- **Returns**: `null`
+
+### `on_mouseup(callback)`
+
+Registers a callback fired when a mouse button is released.
+
+- **Parameters**: `callback` - Function receiving `(button, x, y)`
+- **Returns**: `null`
+
+### `is_mouse_down(button_name)`
+
+Queries whether a mouse button is currently held down.
+
+- **Parameters**: `button_name` - String mouse button (e.g. `"left"`, `"right"`, `"middle"`)
+- **Returns**: `true` if held down, `false` otherwise
+
+### `on_mousemove(callback)` (or `on_mouse_move`)
 
 Registers a callback for mouse movement events.
+
+- **Parameters**: `callback` - Function receiving `(x, y)`
+- **Returns**: `null`
+
+### `on_mouseenter(callback)` (or `on_mouse_enter`)
+
+Registers a callback fired when mouse cursor enters the window.
+
+- **Parameters**: `callback` - Function receiving `()`
+- **Returns**: `null`
+
+### `on_mouseleave(callback)` (or `on_mouse_leave`)
+
+Registers a callback fired when mouse cursor leaves the window.
+
+- **Parameters**: `callback` - Function receiving `()`
+- **Returns**: `null`
+
+### `on_resize(callback)`
+
+Registers a callback fired when the window is resized.
+
+- **Parameters**: `callback` - Function receiving `(width, height)`
+- **Returns**: `null`
 
 - **Parameters**: `callback` - Function receiving (x, y)
 - **Returns**: `null`

@@ -154,166 +154,268 @@ var graphicsModule = map[string]tender.Object{
 
 			setupViewport()
 
-			// Register default reshape function to adjust coordinate space dynamically
+			// Event callback targets
+			var (
+				onDrawCB       tender.Object = tender.NullValue
+				onUpdateCB     tender.Object = tender.NullValue
+				onKeyCB        tender.Object = tender.NullValue
+				onKeyDownCB    tender.Object = tender.NullValue
+				onKeyUpCB      tender.Object = tender.NullValue
+				onKeyHoldCB    tender.Object = tender.NullValue
+				onMouseCB      tender.Object = tender.NullValue
+				onMouseDownCB  tender.Object = tender.NullValue
+				onMouseUpCB    tender.Object = tender.NullValue
+				onMouseMoveCB  tender.Object = tender.NullValue
+				onMouseEnterCB tender.Object = tender.NullValue
+				onMouseLeaveCB tender.Object = tender.NullValue
+				onResizeCB     tender.Object = tender.NullValue
+			)
+
+			// Input state tracking
+			keyStateMap := make(map[string]bool)
+			mouseStateMap := make(map[string]bool)
+
+			// Register GLUT event listeners
 			glut.ReshapeFunc(func(rw, rh int) {
 				state.Width = rw
 				state.Height = rh
 				setupViewport()
+				if onResizeCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onResizeCB,
+						&tender.Int{Value: int64(rw)},
+						&tender.Int{Value: int64(rh)},
+					); err != nil {
+						fmt.Println("on_resize callback error:", err)
+					}
+				}
+			})
+
+			glut.DisplayFunc(func() {
+				setupViewport()
+				gl.ClearColor(0.15, 0.15, 0.18, 1.0)
+				gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+				if onDrawCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onDrawCB); err != nil {
+						fmt.Println("on_draw callback error:", err)
+					}
+				}
+				glut.SwapBuffers()
+			})
+
+			glut.IdleFunc(func() {
+				if onUpdateCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onUpdateCB); err != nil {
+						fmt.Println("on_update callback error:", err)
+					}
+				}
+				if onKeyHoldCB != tender.NullValue {
+					for k, pressed := range keyStateMap {
+						if pressed {
+							if _, err := tender.WrapFuncCall(vm, onKeyHoldCB, &tender.String{Value: k}); err != nil {
+								fmt.Println("on_key_hold callback error:", err)
+							}
+						}
+					}
+				}
+				glut.PostRedisplay()
+			})
+
+			handleKeyDown := func(keyName string, x, y int) {
+				keyStateMap[keyName] = true
+				if onKeyDownCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onKeyDownCB,
+						&tender.String{Value: keyName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_keydown callback error:", err)
+					}
+				}
+				if onKeyCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onKeyCB,
+						&tender.String{Value: keyName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_key callback error:", err)
+					}
+				}
+			}
+
+			glut.KeyboardFunc(func(key byte, x, y int) {
+				handleKeyDown(string(key), x, y)
+			})
+
+			glut.SpecialFunc(func(key int, x, y int) {
+				handleKeyDown(specialKeyName(key), x, y)
+			})
+
+			handleKeyUp := func(keyName string, x, y int) {
+				keyStateMap[keyName] = false
+				if onKeyUpCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onKeyUpCB,
+						&tender.String{Value: keyName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_keyup callback error:", err)
+					}
+				}
+			}
+
+			glut.KeyboardUpFunc(func(key byte, x, y int) {
+				handleKeyUp(string(key), x, y)
+			})
+
+			glut.SpecialUpFunc(func(key int, x, y int) {
+				handleKeyUp(specialKeyName(key), x, y)
+			})
+
+			glut.MouseFunc(func(button, stateVal, x, y int) {
+				btnName := mouseButtonName(button)
+				actName := mouseActionName(stateVal)
+				if stateVal == glut.DOWN {
+					mouseStateMap[btnName] = true
+				} else {
+					mouseStateMap[btnName] = false
+				}
+
+				if onMouseCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseCB,
+						&tender.String{Value: btnName},
+						&tender.String{Value: actName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_mouse callback error:", err)
+					}
+				}
+				if stateVal == glut.DOWN && onMouseDownCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseDownCB,
+						&tender.String{Value: btnName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_mousedown callback error:", err)
+					}
+				}
+				if stateVal == glut.UP && onMouseUpCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseUpCB,
+						&tender.String{Value: btnName},
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_mouseup callback error:", err)
+					}
+				}
+			})
+
+			moveFunc := func(x, y int) {
+				if onMouseMoveCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseMoveCB,
+						&tender.Int{Value: int64(x)},
+						&tender.Int{Value: int64(y)},
+					); err != nil {
+						fmt.Println("on_mousemove callback error:", err)
+					}
+				}
+			}
+			glut.MotionFunc(moveFunc)
+			glut.PassiveMotionFunc(moveFunc)
+
+			glut.EntryFunc(func(stateVal int) {
+				if stateVal == glut.ENTERED && onMouseEnterCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseEnterCB); err != nil {
+						fmt.Println("on_mouseenter callback error:", err)
+					}
+				}
+				if stateVal == glut.LEFT && onMouseLeaveCB != tender.NullValue {
+					if _, err := tender.WrapFuncCall(vm, onMouseLeaveCB); err != nil {
+						fmt.Println("on_mouseleave callback error:", err)
+					}
+				}
 			})
 
 			ctxMap := createDrawingMethods(state)
 
+			// Helper for creating callback setters
+			createCallbackSetter := func(name string, target *tender.Object) *tender.NativeFunction {
+				return &tender.NativeFunction{
+					Name: name,
+					Value: func(args ...tender.Object) (tender.Object, error) {
+						if len(args) != 1 {
+							return nil, tender.ErrInvalidArgCount
+						}
+						cb := args[0]
+						if cb != tender.NullValue && !cb.CanCall() {
+							return nil, tender.ErrNotCallable
+						}
+						*target = cb
+						return tender.NullValue, nil
+					},
+				}
+			}
+
 			// Add window specific event functions
-			ctxMap["on_draw"] = &tender.NativeFunction{
-				Name: "on_draw",
+			ctxMap["on_draw"] = createCallbackSetter("on_draw", &onDrawCB)
+			ctxMap["on_update"] = createCallbackSetter("on_update", &onUpdateCB)
+			ctxMap["on_key"] = createCallbackSetter("on_key", &onKeyCB)
+			ctxMap["on_keydown"] = createCallbackSetter("on_keydown", &onKeyDownCB)
+			ctxMap["on_keyup"] = createCallbackSetter("on_keyup", &onKeyUpCB)
+
+			keyHoldSetter := createCallbackSetter("on_key_hold", &onKeyHoldCB)
+			ctxMap["on_keyhold"] = keyHoldSetter
+
+			ctxMap["on_mouse"] = createCallbackSetter("on_mouse", &onMouseCB)
+			ctxMap["on_mousedown"] = createCallbackSetter("on_mousedown", &onMouseDownCB)
+			ctxMap["on_mouseup"] = createCallbackSetter("on_mouseup", &onMouseUpCB)
+
+			mouseMoveSetter := createCallbackSetter("on_mousemove", &onMouseMoveCB)
+			ctxMap["on_mousemove"] = mouseMoveSetter
+
+			mouseEnterSetter := createCallbackSetter("on_mouseenter", &onMouseEnterCB)
+			ctxMap["on_mouseenter"] = mouseEnterSetter
+
+			mouseLeaveSetter := createCallbackSetter("on_mouseleave", &onMouseLeaveCB)
+			ctxMap["on_mouseleave"] = mouseLeaveSetter
+
+			ctxMap["on_resize"] = createCallbackSetter("on_resize", &onResizeCB)
+
+			// Query functions for key/mouse state
+			isKeyDownFn := &tender.NativeFunction{
+				Name: "is_key_down",
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 1 {
 						return nil, tender.ErrInvalidArgCount
 					}
-					cb := args[0]
-					if cb != tender.NullValue && !cb.CanCall() {
-						return nil, tender.ErrNotCallable
+					keyStr, ok := args[0].(*tender.String)
+					if !ok {
+						return nil, tender.ErrInvalidArgument
 					}
-
-					glut.DisplayFunc(func() {
-						setupViewport()
-						// Default background color setup from draw color
-						gl.ClearColor(0.15, 0.15, 0.18, 1.0)
-						gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-
-						if cb != tender.NullValue {
-							if _, err := tender.WrapFuncCall(vm, cb); err != nil {
-								fmt.Println("on_draw callback error:", err)
-							}
-						}
-						glut.SwapBuffers()
-					})
-					return tender.NullValue, nil
+					if keyStateMap[keyStr.Value] {
+						return tender.TrueValue, nil
+					}
+					return tender.FalseValue, nil
 				},
 			}
+			ctxMap["is_key_down"] = isKeyDownFn
+			ctxMap["is_key_pressed"] = isKeyDownFn
 
-			ctxMap["on_update"] = &tender.NativeFunction{
-				Name: "on_update",
+			ctxMap["is_mouse_down"] = &tender.NativeFunction{
+				Name: "is_mouse_down",
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 1 {
 						return nil, tender.ErrInvalidArgCount
 					}
-					cb := args[0]
-					if cb != tender.NullValue && !cb.CanCall() {
-						return nil, tender.ErrNotCallable
+					btnStr, ok := args[0].(*tender.String)
+					if !ok {
+						return nil, tender.ErrInvalidArgument
 					}
-
-					glut.IdleFunc(func() {
-						if cb != tender.NullValue {
-							if _, err := tender.WrapFuncCall(vm, cb); err != nil {
-								fmt.Println("on_update callback error:", err)
-							}
-						}
-						glut.PostRedisplay()
-					})
-					return tender.NullValue, nil
-				},
-			}
-
-			ctxMap["on_key"] = &tender.NativeFunction{
-				Name: "on_key",
-				Value: func(args ...tender.Object) (tender.Object, error) {
-					if len(args) != 1 {
-						return nil, tender.ErrInvalidArgCount
+					if mouseStateMap[btnStr.Value] {
+						return tender.TrueValue, nil
 					}
-					cb := args[0]
-					if cb != tender.NullValue && !cb.CanCall() {
-						return nil, tender.ErrNotCallable
-					}
-
-					if cb == tender.NullValue {
-						glut.KeyboardFunc(nil)
-						glut.SpecialFunc(nil)
-						return tender.NullValue, nil
-					}
-
-					glut.KeyboardFunc(func(key byte, x, y int) {
-						if _, err := tender.WrapFuncCall(vm, cb,
-							&tender.String{Value: string(key)},
-							&tender.Int{Value: int64(x)},
-							&tender.Int{Value: int64(y)},
-						); err != nil {
-							fmt.Println("on_key callback error:", err)
-						}
-					})
-
-					glut.SpecialFunc(func(key int, x, y int) {
-						if _, err := tender.WrapFuncCall(vm, cb,
-							&tender.String{Value: specialKeyName(key)},
-							&tender.Int{Value: int64(x)},
-							&tender.Int{Value: int64(y)},
-						); err != nil {
-							fmt.Println("on_key (special) callback error:", err)
-						}
-					})
-
-					return tender.NullValue, nil
-				},
-			}
-
-			ctxMap["on_mouse"] = &tender.NativeFunction{
-				Name: "on_mouse",
-				Value: func(args ...tender.Object) (tender.Object, error) {
-					if len(args) != 1 {
-						return nil, tender.ErrInvalidArgCount
-					}
-					cb := args[0]
-					if cb != tender.NullValue && !cb.CanCall() {
-						return nil, tender.ErrNotCallable
-					}
-
-					if cb == tender.NullValue {
-						glut.MouseFunc(nil)
-						return tender.NullValue, nil
-					}
-
-					glut.MouseFunc(func(button, stateVal, x, y int) {
-						if _, err := tender.WrapFuncCall(vm, cb,
-							&tender.String{Value: mouseButtonName(button)},
-							&tender.String{Value: mouseActionName(stateVal)},
-							&tender.Int{Value: int64(x)},
-							&tender.Int{Value: int64(y)},
-						); err != nil {
-							fmt.Println("on_mouse callback error:", err)
-						}
-					})
-					return tender.NullValue, nil
-				},
-			}
-
-			ctxMap["on_mouse_move"] = &tender.NativeFunction{
-				Name: "on_mouse_move",
-				Value: func(args ...tender.Object) (tender.Object, error) {
-					if len(args) != 1 {
-						return nil, tender.ErrInvalidArgCount
-					}
-					cb := args[0]
-					if cb != tender.NullValue && !cb.CanCall() {
-						return nil, tender.ErrNotCallable
-					}
-
-					if cb == tender.NullValue {
-						glut.MotionFunc(nil)
-						glut.PassiveMotionFunc(nil)
-						return tender.NullValue, nil
-					}
-
-					moveFunc := func(x, y int) {
-						if _, err := tender.WrapFuncCall(vm, cb,
-							&tender.Int{Value: int64(x)},
-							&tender.Int{Value: int64(y)},
-						); err != nil {
-							fmt.Println("on_mouse_move callback error:", err)
-						}
-					}
-					glut.MotionFunc(moveFunc)
-					glut.PassiveMotionFunc(moveFunc)
-					return tender.NullValue, nil
+					return tender.FalseValue, nil
 				},
 			}
 
