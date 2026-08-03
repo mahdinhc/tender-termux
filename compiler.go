@@ -963,7 +963,17 @@ func (c *Compiler) compileAssign(node parser.Node, lhs, rhs []parser.Expr, op to
 
 	// Case 1: numLHS == numRHS
 	if numLHS == numRHS {
-		for _, expr := range rhs {
+		for i, expr := range rhs {
+			if _, isFunc := expr.(*parser.FuncLit); isFunc {
+				if ident, selectors := resolveAssignLHS(lhs[i]); len(selectors) == 0 && ident != "" {
+					if op == token.Define || op == token.Var {
+						_, depth, exists := c.symbolTable.Resolve(ident, false)
+						if depth != 0 || !exists {
+							c.symbolTable.Define(ident)
+						}
+					}
+				}
+			}
 			if err := c.Compile(expr); err != nil {
 				return err
 			}
@@ -1004,7 +1014,7 @@ func (c *Compiler) compileSingleAssign(node parser.Node, lhs parser.Expr, op tok
 	symbol, depth, exists := c.symbolTable.Resolve(ident, false)
 	
 	effOp := op
-	if op == token.Define && depth == 0 && exists {
+	if (op == token.Define || op == token.Var) && depth == 0 && exists {
 		effOp = token.Assign
 	}
 

@@ -308,6 +308,30 @@ func (s *Scanner) Peek() token.Token {
     return token
 }
 
+func (s *Scanner) PeekTokens(n int) []token.Token {
+    savedPos := s.offset
+    savedCh := s.ch
+    savedReadOffset := s.readOffset
+    savedInsertSemi := s.insertSemi
+
+    var result []token.Token
+    for i := 0; i < n; i++ {
+        tok, _, _ := s.Scan()
+        result = append(result, tok)
+        if tok == token.EOF {
+            break
+        }
+    }
+
+    // Restore the saved state
+    s.offset = savedPos
+    s.ch = savedCh
+    s.readOffset = savedReadOffset
+    s.insertSemi = savedInsertSemi
+
+    return result
+}
+
 func (s *Scanner) error(offset int, msg string) {
 	if s.errorHandler != nil {
 		s.errorHandler(s.file.Position(s.file.FileSetPos(offset)), msg)

@@ -932,6 +932,18 @@ func (p *Parser) parseWriteStmt() Stmt {
 	}}
 }
 
+func (p *Parser) isMethodDecl() bool {
+	tokens := p.scanner.PeekTokens(5)
+	if len(tokens) < 5 {
+		return false
+	}
+	return tokens[0] == token.LParen &&
+		tokens[1] == token.Ident &&
+		tokens[2] == token.Ident &&
+		tokens[3] == token.RParen &&
+		tokens[4] == token.Ident
+}
+
 func (p *Parser) parseFuncStmt() Stmt {
 	if p.trace {
 		defer untracep(tracep(p, "FuncStmt"))
@@ -1181,7 +1193,7 @@ func (p *Parser) parseStmt() (stmt Stmt) {
 			return p.parseWriteStmt()
 		case token.Func:
 			peek := p.scanner.Peek()
-			if peek == token.Ident || peek == token.LParen {
+			if peek == token.Ident || (peek == token.LParen && p.isMethodDecl()) {
 				return p.parseFuncStmt()
 			}
 			s := p.parseSimpleStmt(false)
