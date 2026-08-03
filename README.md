@@ -1,10 +1,10 @@
 # Tender
 
-**Tender** is a experimental programming language specially designed for graphics, image processing, audio, scripting, and more! Here is a quick [tutorial](docs/pages/tutorial.md). Also check the [docs](https://2dprototype.github.io/tender)!
+**Tender** is an experimental programming language specially designed for graphics, image processing, audio, scripting, and more! Here is a quick [tutorial](docs/pages/tutorial.md). Also check the [docs](https://2dprototype.github.io/tender)!
 
 ## Overview
 
-Tender compiles into bytecode and executes on a stack-based virtual machine (VM) written in native Golang.
+Tender compiles into bytecode and executes on a stack-based virtual machine (VM) written in native Go. The language features a rich type system including **matrix types** for high-performance numerical computing, **concurrency primitives** with goroutines and channels, and a comprehensive standard library covering everything from graphics to networking.
 
 ## Why Tender?
 
@@ -24,7 +24,9 @@ Modern scripting often means installing dozens of packages before drawing a wind
 - **Includes an extensive [standard library](docs/pages/stdlib.md)**
 - **Designed for 2D graphics**
 - **REPL (Read-Eval-Print Loop) for interactive development**
-- **Rich type system** including int, float, string, bool, char, null, big integers, big floats, complex numbers, bytes, arrays (dynamic and immutable), maps (dynamic and immutable), tuples, time values, and error values
+- **Rich type system** including int, float, string, bool, char, null, big integers, big floats, complex numbers, bytes, arrays (dynamic and immutable), maps (dynamic and immutable), tuples, time values, error values, and **matrices**
+- **High-performance matrix types** with support for int, float, and complex elements; element-wise and matrix multiplication; transposition; determinant; rank; trace; and diagonal operations
+- **Built-in concurrency** with goroutines (`govm`), channels (`makechan`), and synchronization primitives
 - **User-defined structs** with field types, nested structs, anonymous structs, and embedded fields
 - **Closures and first-class functions**
 - **Template literals** with `${}` interpolation (similar to JavaScript template strings)
@@ -85,7 +87,6 @@ Modern scripting often means installing dozens of packages before drawing a wind
 
 1. **Install Tender on your machine.**
 2. **Copy the sample code below:**
-
 
 ```go
 // Canvas drawing example
@@ -154,7 +155,7 @@ win := graphics.new_window(400, 400, "Tender")
 
 win.on_draw(fn() {
     win.clear("#000")
-	win.hex("#f00")
+    win.hex("#f00")
     win.circle(200, 200, 100)
     win.fill()
 })
@@ -281,6 +282,125 @@ var sqrt2 = m.sqrt(2)
 println(sqrt2)
 ```
 
+### Matrix Operations (New!)
+
+Tender supports high-performance matrix types for numerical computing:
+
+```go
+// Create matrices
+m1 := matrix([
+	[1, 2, 3], 
+	[4, 5, 6],
+	[4, 5, 6]
+])
+
+m2 := matrix([
+	[7,  8,  1], 
+	[9,  10, 2], 
+	[11, 12, 2]
+])
+
+// Matrix multiplication
+m3 := m1 * m2
+debug(m3)
+
+// Element-wise operations
+m4 := m1 + 10  // Add scalar to every element
+debug(m4)
+
+// Matrix properties
+rows := m1.rows
+cols := m1.cols
+shape := m1.shape
+debug(rows, cols, shape)
+
+// Transpose
+m1t := m1.T
+debug(m1t)
+
+// For square matrices
+det := m1.det      // determinant
+trace := m1.trace  // trace
+diag := m1.diag    // diagonal elements
+debug(det, trace, diag)
+
+// Matrix methods
+row0 := m1.row(0)   // Get first row as array
+col1 := m1.col(1)   // Get second column as array
+flat := m1.flatten  // Flatten to array
+debug(row0, col1, flat)
+
+// Type conversion
+m_int := matrix(3, 3, "int", [1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+m_float := m_int.to_float()      // Convert to float matrix
+m_complex := m_int.to_complex()  // Convert to complex matrix
+debug(m_float |> typeof, m_complex |> typeof)
+```
+
+### Concurrency (New!)
+
+Tender provides built-in goroutines and channels for concurrent programming:
+
+```go
+// ----- Simple goroutine -----
+g := go fn() {
+    println("Hello from goroutine!")
+    return 42   // return a value
+}()
+
+// Wait for completion (blocks until done)
+g.wait()
+
+// Get the return value
+result := g.result()
+println("Goroutine returned:", result)  // 42
+
+// Abort a goroutine (if needed, e.g., from another goroutine)
+// g.abort()
+
+// ----- Channels -----
+ch := chan(10)  // buffered channel with capacity 10
+
+// Send and receive
+ch <- "hello"
+msg := <-ch
+println(msg)  // "hello"
+ch.close() // Close the channel (sends no more values)
+
+// ----- Concurrent worker pool -----
+fn worker(id, jobs, results) {
+    for {
+        job := <-jobs        // blocks until a value is available
+        if is_null(job) {    // channel closed => receive returns null
+            break
+        }
+		results <- job * 2   // send result
+    }
+}
+
+jobs := chan(100)
+results := chan(100)
+
+// Start 10 workers
+for i := 0; i < 10; i++ {
+    // govm(worker, i, jobs, results
+	go worker(i, jobs, results)
+}
+
+// Send 50 jobs
+for i := 0; i < 50; i++ {
+    jobs <- i
+}
+jobs.close()  // signal workers to stop
+
+// Collect results (order may vary)
+for i := 0; i < 50; i++ {
+    res := <-results
+    println(res)
+}
+```
+
 Explore various examples demonstrating Tender's features in the [examples](examples) directory.
 
 ---
@@ -324,8 +444,8 @@ Tender provides a rich type system with support for:
 |------|-------------|---------|
 | `int` | 64-bit integer | `42` |
 | `float` | 64-bit floating point | `3.14159` |
-| `bigint` | Arbitrary-precision integer | `12345678901234567890` |
-| `bigfloat` | Arbitrary-precision float | `3.14159265358979323846` |
+| `bigint` | Arbitrary-precision integer | `bigint(12345678...)` |
+| `bigfloat` | Arbitrary-precision float | `bigfloat(3.1415...)` |
 | `complex` | Complex number | `3+4i` |
 | `string` | UTF-8 string | `"hello"` |
 | `bool` | Boolean | `true` or `false` |
@@ -336,24 +456,27 @@ Tender provides a rich type system with support for:
 | `map` | Dynamic map | `{"key": value}` |
 | `immutable-map` | Immutable map | `{"key": value}` |
 | `tuple` | Fixed-size immutable sequence | `(1, "hello", true)` |
+| `matrix:int` | Integer matrix | `matrix(1,2,"int",[1,2])` |
+| `matrix:float` | Float matrix | `matrix(1,2,"float",[1,2.2])` |
+| `matrix:complex` | Complex matrix | `matrix(1,2,"complex",[1,2i])` |
 | `struct` | User-defined structure | `user{name: "Alice", age: 30}` |
 | `time` | Time value | `time()` |
 | `error` | Error value | `error("message")` |
 | `null` | Null value | `null` |
+| `channel` | Communication channel | `chan(10)` |
+| `goroutine` | Concurrent task handle | `go fn(){ ... }()` |
 
 ---
 
 ## Dependencies
-
-Tender uses the following dependencies:
-
 - [go-mp3](https://github.com/hajimehoshi/go-mp3)
-- [gorilla/websocket](https://github.com/gorilla/websocket)
-- [ebitengine/oto/v3](https://github.com/ebitengine/oto/v3)
-- [exp/shiny](https://pkg.go.dev/golang.org/x/exp/shiny)
-- [fogleman/gg](https://github.com/fogleman/gg)
-
----
+- [websocket](https://github.com/gorilla/websocket)
+- [oto](https://github.com/ebitengine/oto/v3)
+- [shiny](https://github.com/oakmound/shiny)
+- [gg](https://github.com/fogleman/gg)
+- [gl](https://github.com/go-gl/gl), [glfw](https://github.com/go-gl/glfw), [glu](https://github.com/go-gl/glu), [glut](https://github.com/go-gl/glut)
+- [wui](https://github.com/gonutz/wui/v2)
+- [lipgloss](https://github.com/charmbracelet/lipgloss)
 
 ## Syntax Highlighting
 
