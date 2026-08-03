@@ -215,6 +215,18 @@ func (m *Matrix[T]) IsFalsy() bool {
 	return len(m.Data) == 0
 }
 
+func toInt64[T MatrixElement](val T) int64 {
+	switch v := any(val).(type) {
+	case int64:
+		return v
+	case float64:
+		return int64(v)
+	case complex128:
+		return int64(real(v))
+	}
+	return 0
+}
+
 func toFloat64[T MatrixElement](val T) float64 {
 	switch v := any(val).(type) {
 	case int64:
@@ -239,6 +251,61 @@ func toComplex128[T MatrixElement](val T) complex128 {
 	return 0
 }
 
+func (m *Matrix[T]) ToIntMatrix() *Matrix[int64] {
+	data := make([]int64, len(m.Data))
+	for i, v := range m.Data {
+		data[i] = toInt64(v)
+	}
+	return &Matrix[int64]{Rows: m.Rows, Cols: m.Cols, Data: data}
+}
+
+func (m *Matrix[T]) ToFloatMatrix() *Matrix[float64] {
+	data := make([]float64, len(m.Data))
+	for i, v := range m.Data {
+		data[i] = toFloat64(v)
+	}
+	return &Matrix[float64]{Rows: m.Rows, Cols: m.Cols, Data: data}
+}
+
+func (m *Matrix[T]) ToComplexMatrix() *Matrix[complex128] {
+	data := make([]complex128, len(m.Data))
+	for i, v := range m.Data {
+		data[i] = toComplex128(v)
+	}
+	return &Matrix[complex128]{Rows: m.Rows, Cols: m.Cols, Data: data}
+}
+
+func (m *Matrix[T]) scalarOpLHS(lhs T, op token.Token) (Object, error) {
+	res := &Matrix[T]{Rows: m.Rows, Cols: m.Cols, Data: make([]T, len(m.Data))}
+	switch op {
+	case token.Add:
+		for i := range m.Data {
+			res.Data[i] = lhs + m.Data[i]
+		}
+		return res, nil
+	case token.Sub:
+		for i := range m.Data {
+			res.Data[i] = lhs - m.Data[i]
+		}
+		return res, nil
+	case token.Mul:
+		for i := range m.Data {
+			res.Data[i] = lhs * m.Data[i]
+		}
+		return res, nil
+	case token.Quo:
+		var zero T
+		for i := range m.Data {
+			if m.Data[i] == zero {
+				return nil, fmt.Errorf("division by zero matrix element")
+			}
+			res.Data[i] = lhs / m.Data[i]
+		}
+		return res, nil
+	}
+	return nil, ErrInvalidOperator
+}
+
 func scalarToT[T MatrixElement](obj Object) (T, bool) {
 	var zero T
 	switch any(zero).(type) {
@@ -246,25 +313,22 @@ func scalarToT[T MatrixElement](obj Object) (T, bool) {
 		if v, ok := obj.(*Int); ok {
 			return any(v.Value).(T), true
 		}
-		if v, ok := obj.(*Float); ok {
-			return any(int64(v.Value)).(T), true
-		}
 	case float64:
-		if v, ok := obj.(*Int); ok {
-			return any(float64(v.Value)).(T), true
-		}
 		if v, ok := obj.(*Float); ok {
 			return any(v.Value).(T), true
 		}
-	case complex128:
 		if v, ok := obj.(*Int); ok {
-			return any(complex(float64(v.Value), 0)).(T), true
+			return any(float64(v.Value)).(T), true
+		}
+	case complex128:
+		if v, ok := obj.(*Complex); ok {
+			return any(v.Value).(T), true
 		}
 		if v, ok := obj.(*Float); ok {
 			return any(complex(v.Value, 0)).(T), true
 		}
-		if v, ok := obj.(*Complex); ok {
-			return any(v.Value).(T), true
+		if v, ok := obj.(*Int); ok {
+			return any(complex(float64(v.Value), 0)).(T), true
 		}
 	}
 	return zero, false
@@ -272,7 +336,7 @@ func scalarToT[T MatrixElement](obj Object) (T, bool) {
 
 // BinaryOp implements matrix + matrix, - matrix, * matrix, and scalar +, -, *, /.
 func (m *Matrix[T]) BinaryOp(op token.Token, rhs Object) (Object, error) {
-	// Matrix op Matrix
+	// 1. Same-type Matrix op Matrix
 	if rhsMat, ok := rhs.(*Matrix[T]); ok {
 		switch op {
 		case token.Add:
@@ -324,7 +388,42 @@ func (m *Matrix[T]) BinaryOp(op token.Token, rhs Object) (Object, error) {
 		}
 	}
 
-	// Matrix op Scalar
+	// 2. Type Promotion for Mixed Scalar or Mixed Matrix Types
+	var zero T
+	switch any(zero).(type) {
+	case int64:
+		if _, isFloat := rhs.(*Float); isFloat {
+			return m.ToFloatMatrix().BinaryOp(op, rhs)
+		}
+		if _, isCmplx := rhs.(*Complex); isCmplx {
+			return m.ToComplexMatrix().BinaryOp(op, rhs)
+		}
+		if rhsMat, ok := rhs.(*Matrix[float64]); ok {
+			return m.ToFloatMatrix().BinaryOp(op, rhsMat)
+		}
+		if rhsMat, ok := rhs.(*Matrix[complex128]); ok {
+			return m.ToComplexMatrix().BinaryOp(op, rhsMat)
+		}
+	case float64:
+		if _, isCmplx := rhs.(*Complex); isCmplx {
+			return m.ToComplexMatrix().BinaryOp(op, rhs)
+		}
+		if rhsMat, ok := rhs.(*Matrix[int64]); ok {
+			return m.BinaryOp(op, rhsMat.ToFloatMatrix())
+		}
+		if rhsMat, ok := rhs.(*Matrix[complex128]); ok {
+			return m.ToComplexMatrix().BinaryOp(op, rhsMat)
+		}
+	case complex128:
+		if rhsMat, ok := rhs.(*Matrix[int64]); ok {
+			return m.BinaryOp(op, rhsMat.ToComplexMatrix())
+		}
+		if rhsMat, ok := rhs.(*Matrix[float64]); ok {
+			return m.BinaryOp(op, rhsMat.ToComplexMatrix())
+		}
+	}
+
+	// 3. Same-type Scalar Operation
 	scalar, ok := scalarToT[T](rhs)
 	if !ok {
 		return nil, ErrInvalidOperator
@@ -350,7 +449,6 @@ func (m *Matrix[T]) BinaryOp(op token.Token, rhs Object) (Object, error) {
 		}
 		return res, nil
 	case token.Quo:
-		var zero T
 		if scalar == zero {
 			return nil, fmt.Errorf("division by zero scalar")
 		}
@@ -380,6 +478,33 @@ func formatTAsObject[T MatrixElement](val T) Object {
 func (m *Matrix[T]) IndexGet(index Object) (Object, error) {
 	if strIdx, ok := index.(*String); ok {
 		switch strIdx.Value {
+		case "to_int":
+			return &NativeFunction{
+				Value: func(args ...Object) (Object, error) {
+					if len(args) != 0 {
+						return nil, ErrWrongNumArguments
+					}
+					return m.ToIntMatrix(), nil
+				},
+			}, nil
+		case "to_float":
+			return &NativeFunction{
+				Value: func(args ...Object) (Object, error) {
+					if len(args) != 0 {
+						return nil, ErrWrongNumArguments
+					}
+					return m.ToFloatMatrix(), nil
+				},
+			}, nil
+		case "to_complex":
+			return &NativeFunction{
+				Value: func(args ...Object) (Object, error) {
+					if len(args) != 0 {
+						return nil, ErrWrongNumArguments
+					}
+					return m.ToComplexMatrix(), nil
+				},
+			}, nil
 		case "rows":
 			return &Int{Value: int64(m.Rows)}, nil
 		case "cols":

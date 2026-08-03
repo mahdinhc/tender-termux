@@ -1193,6 +1193,12 @@ func (o *Float) BinaryOp(op token.Token, rhs Object) (Object, error) {
 			return binaryOpBigFloat(op, new(big.Float).SetFloat64(o.Value), rhs.Value), nil
 		case *Complex:
 			return binaryOpComplex(op, complex(o.Value, 0), rhs.Value), nil
+		case *Matrix[int64]:
+			return rhs.ToFloatMatrix().scalarOpLHS(o.Value, op)
+		case *Matrix[float64]:
+			return rhs.scalarOpLHS(o.Value, op)
+		case *Matrix[complex128]:
+			return rhs.scalarOpLHS(complex(o.Value, 0), op)
 	}
 	return nil, ErrInvalidOperator
 }
@@ -1416,6 +1422,12 @@ func (o *Int) BinaryOp(op token.Token, rhs Object) (Object, error) {
 			return binaryOpBigFloat(op, new(big.Float).SetInt64(o.Value), rhs.Value), nil
 		case *Complex:
 			return binaryOpComplex(op, complex(float64(o.Value), 0), rhs.Value), nil
+		case *Matrix[int64]:
+			return rhs.scalarOpLHS(o.Value, op)
+		case *Matrix[float64]:
+			return rhs.scalarOpLHS(float64(o.Value), op)
+		case *Matrix[complex128]:
+			return rhs.scalarOpLHS(complex(float64(o.Value), 0), op)
 	}
 	return nil, ErrInvalidOperator
 }

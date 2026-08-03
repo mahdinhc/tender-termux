@@ -1528,6 +1528,15 @@ func builtinMatrix(args ...Object) (Object, error) {
 	// 1 arg cases
 	if argsLen == 1 {
 		arg := args[0]
+		if m, ok := arg.(*Matrix[int64]); ok {
+			return m.Copy(), nil
+		}
+		if m, ok := arg.(*Matrix[float64]); ok {
+			return m.Copy(), nil
+		}
+		if m, ok := arg.(*Matrix[complex128]); ok {
+			return m.Copy(), nil
+		}
 		if arr, ok := arg.(*Array); ok {
 			if len(arr.Value) == 0 {
 				return &Matrix[float64]{Rows: 0, Cols: 0, Data: []float64{}}, nil
@@ -1572,11 +1581,39 @@ func builtinMatrix(args ...Object) (Object, error) {
 			}
 			return &Matrix[float64]{Rows: n, Cols: n, Data: data}, nil
 		}
-		return nil, ErrInvalidArgumentType{Name: "first", Expected: "array", Found: arg.TypeName()}
+		return nil, ErrInvalidArgumentType{Name: "first", Expected: "array or matrix", Found: arg.TypeName()}
 	}
 
-	// 2 args: matrix(rows, cols), matrix(size, diag)
+	// 2 args: matrix(rows, cols), matrix(size, diag), matrix(m, "type"), matrix("type", m)
 	if argsLen == 2 {
+		// Matrix conversion case: matrix(m, "type") or matrix("type", m)
+		var matObj Object
+		var typeStr string
+		if str, ok := args[1].(*String); ok {
+			matObj = args[0]
+			typeStr = str.Value
+		} else if str, ok := args[0].(*String); ok {
+			matObj = args[1]
+			typeStr = str.Value
+		}
+
+		if matObj != nil && typeStr != "" {
+			switch typeStr {
+			case "int":
+				if m, ok := matObj.(*Matrix[int64]); ok { return m.ToIntMatrix(), nil }
+				if m, ok := matObj.(*Matrix[float64]); ok { return m.ToIntMatrix(), nil }
+				if m, ok := matObj.(*Matrix[complex128]); ok { return m.ToIntMatrix(), nil }
+			case "float":
+				if m, ok := matObj.(*Matrix[int64]); ok { return m.ToFloatMatrix(), nil }
+				if m, ok := matObj.(*Matrix[float64]); ok { return m.ToFloatMatrix(), nil }
+				if m, ok := matObj.(*Matrix[complex128]); ok { return m.ToFloatMatrix(), nil }
+			case "complex":
+				if m, ok := matObj.(*Matrix[int64]); ok { return m.ToComplexMatrix(), nil }
+				if m, ok := matObj.(*Matrix[float64]); ok { return m.ToComplexMatrix(), nil }
+				if m, ok := matObj.(*Matrix[complex128]); ok { return m.ToComplexMatrix(), nil }
+			}
+		}
+
 		val1, ok1 := ToInt(args[0])
 		if !ok1 { return nil, ErrInvalidArgumentType{Name: "rows", Expected: "int", Found: args[0].TypeName()} }
 		
