@@ -19,13 +19,13 @@ fn get_(key) {
 }
 
 // Use in concurrent environment
-go(fn() {
+go fn() {
     set_("user1", "Alice")
-})
+}()
 
-go(fn() {
+go fn() {
     set_("user2", "Bob")
-})
+}()
 
 sleep(100)
 println(get_("user1")) // Alice

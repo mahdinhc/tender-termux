@@ -5,7 +5,8 @@ import "crypto"
 aes_key := "0123456789abcdef0123456789abcdef" // 32 bytes
 encrypted := crypto.aes.encrypt("secret message", aes_key)
 decrypted := crypto.aes.decrypt(encrypted, aes_key)
-println("Default Decrypted:", string(decrypted))
+println("Default Encrypted:", encrypted)
+println("Default Decrypted:", decrypted)
 
 // Create block cipher instance for advanced modes
 block := crypto.aes.new_cipher(aes_key)

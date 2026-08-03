@@ -1,10 +1,11 @@
-import "colors"
+// tender@v0.0.8
+import "console"
 
 // Create red text
-red_text := colors.style("Warning!", {color: "#f00", bold: true})
+red_text := console.style("Warning!", {color: "#f00", bold: true})
 
 // Create bordered panel
-panel := colors.style("Content", {
+panel := console.style("Content", {
   border: "rounded",
   padding: 2,
   color: "#00FF22",

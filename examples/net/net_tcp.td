@@ -15,7 +15,7 @@ println(udp_addr)
 // Dial a TCP Connection
 conn := net.dialtcp("tcp", "example.com:80")
 if !is_error(conn) {
-    println("Connected to: ", conn.remote_addr())
+    println("Connected to: ", conn.remote_addr)
 
     // Write to the connection
     msg := bytes("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")

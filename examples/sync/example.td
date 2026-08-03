@@ -19,7 +19,8 @@ http.listen_and_serve(":8080", fn(req, res) {
         res.set_status(200)
         res.set_header("Content-Type", "text/plain")
         res.write("Welcome! You are visitor #" + string(current_visitor))
-    } else {
+    } 
+    else {
         res.set_status(404)
         res.write("Page not found on server.")
     }

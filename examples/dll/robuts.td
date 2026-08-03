@@ -11,10 +11,12 @@ if show_message_box != null {
     if result == 0 {
         error_code := dll.last_error()
         println("MessageBox failed with error:", error_code)
-    } else {
+    } 
+    else {
         println("MessageBox succeeded, result:", result)
     }
-} else {
+} 
+else {
     println("Failed to get MessageBoxW procedure")
 }
 
@@ -32,9 +34,11 @@ if mem.address != 0 {
     free_result := dll.memory().free(mem)
     if free_result {
         println("Memory freed successfully")
-    } else {
+    } 
+    else {
         println("Failed to free memory")
     }
-} else {
+} 
+else {
     println("Failed to allocate memory")
 }

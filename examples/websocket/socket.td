@@ -5,12 +5,12 @@ import "websocket"
 var conn = websocket.dial("ws://example.com/socket")
 
 //Read message from server
-go(fn(){
+go fn(){
 	for {
 		read := conn.read_message()
 		println(read)
 	}
-})
+}()
 
 if !conn {
 	println(conn)
