@@ -428,4 +428,18 @@ func (s *MethodStmt) String() string {
 	return "fn (" + s.ReceiverName.Name + " " + s.ReceiverType.Name + ") " + s.Ident.Name + s.Expr.Type.Params.String() + " " + s.Expr.Body.String()
 }
 
+// SendStmt represents channel send statement ch <- val.
+type SendStmt struct {
+	Chan     Expr
+	Value    Expr
+	ArrowPos Pos
+}
+
+func (s *SendStmt) stmtNode() {}
+func (s *SendStmt) Pos() Pos { return s.Chan.Pos() }
+func (s *SendStmt) End() Pos { return s.Value.End() }
+func (s *SendStmt) String() string {
+	return s.Chan.String() + " <- " + s.Value.String()
+}
+
 

@@ -203,6 +203,9 @@ func (s *Scanner) Scan() (
 			if s.ch == '|' {
 				s.next()
 				tok = token.PipeL
+			} else if s.ch == '-' {
+				s.next()
+				tok = token.Arrow
 			} else if s.ch == '=' && s.peek() == '>' {
 				s.next()
 				s.next()

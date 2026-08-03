@@ -74,6 +74,7 @@ const (
 	OptionalDot  // ?.
 	Coalesce     // ??
 	Spaceship    // <=>
+	Arrow        // <-
 	_operatorEnd
 	_keywordBeg
 	Break
@@ -99,6 +100,8 @@ const (
 	Sysout
 	Type
 	Struct
+	Go
+	Chan
 	// Please
 	_keywordEnd
 )
@@ -165,6 +168,7 @@ var tokens = [...]string{
 	OptionalDot:  "?.",
 	Coalesce:     "??",
 	Spaceship:    "<=>",
+	Arrow:        "<-",
 	Break:        "break",
 	Continue:     "continue",
 	Else:         "else",
@@ -188,6 +192,8 @@ var tokens = [...]string{
 	Sysout:       "sysout",
 	Type:         "type",
 	Struct:       "struct",
+	Go:           "go",
+	Chan:         "chan",
 	// Please:       "please",
 }
 

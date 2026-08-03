@@ -53,6 +53,10 @@ const (
 	OpStruct                      // Struct object
 	OpMethod                      // Method declaration
 	OpUnpack                      // Unpack tuple/array elements onto the stack
+	OpGo                          // Spawn goroutine
+	OpMakeChan                    // Create channel
+	OpSendChan                    // Send to channel
+	OpRecvChan                    // Receive from channel
 )
 
 // OpcodeNames are string representation of opcodes.
@@ -105,6 +109,10 @@ var OpcodeNames = [...]string{
 	OpStruct:        "STRUCT",
 	OpMethod:        "METHOD",
 	OpUnpack:        "UNPACK",
+	OpGo:            "GO",
+	OpMakeChan:      "MAKECHAN",
+	OpSendChan:      "SENDCHAN",
+	OpRecvChan:      "RECVCHAN",
 }
 
 // OpcodeOperands is the number of operands.
@@ -157,6 +165,10 @@ var OpcodeOperands = [...][]int{
 	OpStruct:        {2, 1},
 	OpMethod:        {},
 	OpUnpack:        {1},
+	OpGo:            {1},
+	OpMakeChan:      {},
+	OpSendChan:      {},
+	OpRecvChan:      {},
 }
 
 // ReadOperands reads operands from the bytecode.

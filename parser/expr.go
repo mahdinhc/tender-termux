@@ -827,3 +827,50 @@ func (e *StructLitExpr) String() string {
 	return e.TypeExpr.String() + "{" + strings.Join(elements, ", ") + "}"
 }
 
+// GoExpr represents a go concurrency expression/statement.
+type GoExpr struct {
+	GoPos Pos
+	Call  Expr
+}
+
+func (e *GoExpr) exprNode() {}
+func (e *GoExpr) Pos() Pos { return e.GoPos }
+func (e *GoExpr) End() Pos { return e.Call.End() }
+func (e *GoExpr) String() string {
+	return "go " + e.Call.String()
+}
+
+// MakeChanExpr represents channel creation expression chan(size).
+type MakeChanExpr struct {
+	ChanPos Pos
+	Size    Expr
+}
+
+func (e *MakeChanExpr) exprNode() {}
+func (e *MakeChanExpr) Pos() Pos { return e.ChanPos }
+func (e *MakeChanExpr) End() Pos {
+	if e.Size != nil {
+		return e.Size.End()
+	}
+	return e.ChanPos + 4
+}
+func (e *MakeChanExpr) String() string {
+	if e.Size != nil {
+		return "chan(" + e.Size.String() + ")"
+	}
+	return "chan()"
+}
+
+// RecvExpr represents channel receive expression <-ch.
+type RecvExpr struct {
+	ArrowPos Pos
+	Chan     Expr
+}
+
+func (e *RecvExpr) exprNode() {}
+func (e *RecvExpr) Pos() Pos { return e.ArrowPos }
+func (e *RecvExpr) End() Pos { return e.Chan.End() }
+func (e *RecvExpr) String() string {
+	return "<-" + e.Chan.String()
+}
+

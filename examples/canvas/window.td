@@ -5,7 +5,7 @@ w := 600
 h := 400
 
 
-fn draw(ctx, img) {
+fn draw(ctx) {
 	ctx.hex(`#121212`)
 	ctx.clear()
 	ctx.hex("#0f0")
@@ -17,7 +17,7 @@ fn draw(ctx, img) {
 
 canvas.new_window(w, h, "Hello Tender", fn(window){
 	ctx := window.new_context(w, h)
-	draw(ctx, img)
+	draw(ctx)
 	window.update(w, h)
 	for {
 		e := window.next_event()
@@ -25,7 +25,7 @@ canvas.new_window(w, h, "Hello Tender", fn(window){
 			w = e.width_px 
 			h = e.height_px
 			ctx = window.new_context(e.width_px, e.height_px)
-			draw(ctx, img)
+			draw(ctx)
 			window.update(w, h)
 		}
 		else if e.kind == "lifecycle" && e.prev == 3 && e.next == 0 {

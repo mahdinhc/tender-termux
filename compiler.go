@@ -259,6 +259,42 @@ func (c *Compiler) Compile(node parser.Node) error {
 		default:
 			return c.errorf(node, "invalid unary operator: %s", node.Token.String())
 		}
+	case *parser.GoExpr:
+		call, ok := node.Call.(*parser.CallExpr)
+		if !ok {
+			return c.errorf(node, "go keyword must be followed by a function call")
+		}
+		if err := c.Compile(call.Func); err != nil {
+			return err
+		}
+		for _, arg := range call.Args {
+			if err := c.Compile(arg); err != nil {
+				return err
+			}
+		}
+		c.emit(node, parser.OpGo, len(call.Args))
+	case *parser.MakeChanExpr:
+		if node.Size != nil {
+			if err := c.Compile(node.Size); err != nil {
+				return err
+			}
+		} else {
+			c.emit(node, parser.OpConstant, c.addConstant(&Int{Value: 0}))
+		}
+		c.emit(node, parser.OpMakeChan)
+	case *parser.SendStmt:
+		if err := c.Compile(node.Chan); err != nil {
+			return err
+		}
+		if err := c.Compile(node.Value); err != nil {
+			return err
+		}
+		c.emit(node, parser.OpSendChan)
+	case *parser.RecvExpr:
+		if err := c.Compile(node.Chan); err != nil {
+			return err
+		}
+		c.emit(node, parser.OpRecvChan)
 	case *parser.ImportStmt:
 		if node.Ident != nil {
 			err := c.compileAssign(node, []parser.Expr{node.Ident}, []parser.Expr{node.Expr}, token.Define)

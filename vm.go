@@ -1319,6 +1319,77 @@ func (v *VM) run() {
 			val := iterator.(Iterator).Value()
 			v.stack[v.sp] = val
 			v.sp++
+		case parser.OpGo:
+			numArgs := int(v.curInsts[v.ip+1])
+			v.ip += 1
+
+			args := make([]Object, numArgs)
+			for i := numArgs - 1; i >= 0; i-- {
+				args[i] = v.stack[v.sp-1]
+				v.sp--
+			}
+			fn := v.stack[v.sp-1]
+			v.sp--
+
+			handle, err := spawnGoroutineInternal(v, fn, args...)
+			if err != nil {
+				v.err = err
+				return
+			}
+			v.stack[v.sp] = handle
+			v.sp++
+
+		case parser.OpMakeChan:
+			sizeObj := v.stack[v.sp-1]
+			v.sp--
+			size, ok := ToInt(sizeObj)
+			if !ok {
+				v.err = ErrInvalidArgumentType{
+					Name:     "size",
+					Expected: "int(compatible)",
+					Found:    sizeObj.TypeName(),
+				}
+				return
+			}
+			oc := make(objchan, size)
+			v.stack[v.sp] = &Channel{Value: oc, size: size}
+			v.sp++
+
+		case parser.OpSendChan:
+			val := v.stack[v.sp-1]
+			chObj := v.stack[v.sp-2]
+			v.sp -= 2
+
+			ch, ok := chObj.(*Channel)
+			if !ok {
+				v.err = fmt.Errorf("not a channel: %s", chObj.TypeName())
+				return
+			}
+			select {
+			case <-v.AbortChan:
+				v.err = ErrVMAborted
+				return
+			case ch.Value <- val:
+			}
+
+		case parser.OpRecvChan:
+			chObj := v.stack[v.sp-1]
+			ch, ok := chObj.(*Channel)
+			if !ok {
+				v.err = fmt.Errorf("not a channel: %s", chObj.TypeName())
+				return
+			}
+			select {
+			case <-v.AbortChan:
+				v.err = ErrVMAborted
+				return
+			case val, ok := <-ch.Value:
+				if !ok {
+					val = NullValue
+				}
+				v.stack[v.sp-1] = val
+			}
+
 		case parser.OpSuspend:
 			return
 		default:

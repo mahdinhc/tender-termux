@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	addBuiltinFunction("go", builtinGovm, true)
+	addBuiltinFunction("govm", builtinGovm, true)
 	addBuiltinFunction("abort", builtinAbort, true)
 	addBuiltinFunction("makechan", builtinMakechan, false)
 }
@@ -26,29 +26,16 @@ type goroutineVM struct {
 }
 
 // Starts a independent concurrent goroutine which runs fn(arg1, arg2, ...)
-	//
-	// If fn is Function, the current running VM will be cloned to create
-	// a new VM in which the Function will be running.
-	//
-	// The fn can also be any object that has Call() method, such as NativeFunction,
-	// in which case no cloned VM will be created.
-	//
-	// Returns a goroutineVM object that has wait, result, abort methods.
-	//
-	// The goroutineVM will not exit unless:
-	//  1. All its descendant goroutineVMs exit
-	//  2. It calls abort()
-	//  3. Its goroutineVM object abort() is called on behalf of its parent VM
-	// The latter 2 cases will trigger aborting procedure of all the descendant goroutineVMs,
-// which will further result in #1 above.
 func builtinGovm(args ...Object) (Object, error) {
 	vm := args[0].(*VMObj).Value
 	args = args[1:] // the first arg is VMObj inserted by VM
 	if len(args) == 0 {
 		return nil, ErrWrongNumArguments
 	}
-	
-	fn := args[0]
+	return spawnGoroutineInternal(vm, args[0], args[1:]...)
+}
+
+func spawnGoroutineInternal(vm *VM, fn Object, args ...Object) (Object, error) {
 	if !fn.CanCall() {
 		return nil, ErrInvalidArgumentType{
 			Name:     "first",
@@ -64,7 +51,7 @@ func builtinGovm(args ...Object) (Object, error) {
 	var callers []frame
 	cfn, compiled := fn.(*Function)
 	if compiled {
-	gvm.VM = vm.ShallowClone()
+		gvm.VM = vm.ShallowClone()
 	} else {
 		callers = vm.callers()
 	}
@@ -87,11 +74,11 @@ func builtinGovm(args ...Object) (Object, error) {
 			}
 			gvm.waitChan <- ret{val, err}
 			vm.delChild(gvm.VM)
-		gvm.VM = nil
+			gvm.VM = nil
 		}()
 		
 		if cfn != nil {
-		val, err = gvm.RunCompiled(cfn, args[1:]...)
+			val, err = gvm.RunCompiled(cfn, args...)
 		} else {
 			var nargs []Object
 			if bltnfn, ok := fn.(*NativeFunction); ok {
@@ -100,17 +87,12 @@ func builtinGovm(args ...Object) (Object, error) {
 					nargs = append(nargs, vm.selfObject())
 				}
 			}
-			nargs = append(nargs, args[1:]...)
+			nargs = append(nargs, args...)
 			val, err = fn.Call(nargs...)
 		}
-		}()
-		
-		obj := map[string]Object{
-			"result": &NativeFunction{Value: gvm.getRet},
-			"wait":   &NativeFunction{Value: gvm.waitTimeout},
-			"abort":  &NativeFunction{Value: gvm.abort},
-		}
-		return &Map{Value: obj}, nil
+	}()
+	
+	return &Goroutine{gvm: gvm}, nil
 }
 
 // Triggers the termination process of the current VM and all its descendant VMs.
@@ -135,9 +117,9 @@ func (gvm *goroutineVM) wait(seconds int64) bool {
 	}
 	
 	select {
-		case gvm.ret = <-gvm.waitChan:
+	case gvm.ret = <-gvm.waitChan:
 		atomic.StoreInt64(&gvm.done, 1)
-		case <-time.After(time.Duration(seconds) * time.Second):
+	case <-time.After(time.Duration(seconds) * time.Second):
 		return false
 	}
 	
@@ -145,8 +127,6 @@ func (gvm *goroutineVM) wait(seconds int64) bool {
 }
 
 // Waits for the goroutineVM to complete up to timeout seconds.
-	// Returns true if the goroutineVM exited(successfully or not) within the timeout.
-// Waits forever if the optional timeout not specified, or timeout < 0.
 func (gvm *goroutineVM) waitTimeout(args ...Object) (Object, error) {
 	if len(args) > 1 {
 		return nil, ErrWrongNumArguments
@@ -181,8 +161,7 @@ func (gvm *goroutineVM) abort(args ...Object) (Object, error) {
 	return nil, nil
 }
 
-// Waits the goroutineVM to complete, return Error object if any runtime error occurred
-// during the execution, otherwise return the result value of fn(arg1, arg2, ...)
+// Waits the goroutineVM to complete, return Error object if any runtime error occurred.
 func (gvm *goroutineVM) getRet(args ...Object) (Object, error) {
 	if len(args) != 0 {
 		return nil, ErrWrongNumArguments
@@ -198,13 +177,112 @@ func (gvm *goroutineVM) getRet(args ...Object) (Object, error) {
 
 type objchan chan Object
 
+// Channel represents a first-class channel object in Tender.
+type Channel struct {
+	ObjectImpl
+	Value chan Object
+	size  int
+}
+
+func (c *Channel) TypeName() string {
+	return "channel"
+}
+
+func (c *Channel) String() string {
+	return fmt.Sprintf("<channel cap=%d>", cap(c.Value))
+}
+
+func (c *Channel) Copy() Object {
+	return c
+}
+
+func (c *Channel) IsFalsy() bool {
+	return c.Value == nil
+}
+
+func (c *Channel) Equals(another Object) bool {
+	o, ok := another.(*Channel)
+	if !ok {
+		return false
+	}
+	return c.Value == o.Value
+}
+
+func (c *Channel) IndexGet(index Object) (Object, error) {
+	strIdx, ok := index.(*String)
+	if !ok {
+		return nil, ErrInvalidIndexType
+	}
+	switch strIdx.Value {
+	case "send":
+		oc := objchan(c.Value)
+		return &NativeFunction{Value: oc.send, NeedVMObj: true}, nil
+	case "recv":
+		oc := objchan(c.Value)
+		return &NativeFunction{Value: oc.recv, NeedVMObj: true}, nil
+	case "close":
+		oc := objchan(c.Value)
+		return &NativeFunction{Value: oc.close}, nil
+	case "cap":
+		return &Int{Value: int64(cap(c.Value))}, nil
+	case "len":
+		return &Int{Value: int64(len(c.Value))}, nil
+	}
+	return nil, fmt.Errorf("channel has no field or method %s", strIdx.Value)
+}
+
+// Goroutine represents a handle to a running goroutineVM.
+type Goroutine struct {
+	ObjectImpl
+	gvm *goroutineVM
+}
+
+func (g *Goroutine) TypeName() string {
+	return "goroutine"
+}
+
+func (g *Goroutine) String() string {
+	return "<goroutine>"
+}
+
+func (g *Goroutine) Copy() Object {
+	return g
+}
+
+func (g *Goroutine) IsFalsy() bool {
+	return g.gvm == nil
+}
+
+func (g *Goroutine) Equals(another Object) bool {
+	o, ok := another.(*Goroutine)
+	if !ok {
+		return false
+	}
+	return g.gvm == o.gvm
+}
+
+func (g *Goroutine) IndexGet(index Object) (Object, error) {
+	strIdx, ok := index.(*String)
+	if !ok {
+		return nil, ErrInvalidIndexType
+	}
+	switch strIdx.Value {
+	case "result":
+		return &NativeFunction{Value: g.gvm.getRet}, nil
+	case "wait":
+		return &NativeFunction{Value: g.gvm.waitTimeout}, nil
+	case "abort":
+		return &NativeFunction{Value: g.gvm.abort}, nil
+	}
+	return nil, fmt.Errorf("goroutine has no field or method %s", strIdx.Value)
+}
+
 // Makes a channel to send/receive object
-// Returns a chan object that has send, recv, close methods.
 func builtinMakechan(args ...Object) (Object, error) {
 	var size int
 	switch len(args) {
-		case 0:
-		case 1:
+	case 0:
+	case 1:
 		n, ok := ToInt(args[0])
 		if !ok {
 			return nil, ErrInvalidArgumentType{
@@ -214,21 +292,15 @@ func builtinMakechan(args ...Object) (Object, error) {
 			}
 		}
 		size = n
-		default:
+	default:
 		return nil, ErrWrongNumArguments
 	}
 	
 	oc := make(objchan, size)
-	obj := map[string]Object{
-		"send":  &NativeFunction{Value: oc.send, NeedVMObj: true},
-		"recv":  &NativeFunction{Value: oc.recv, NeedVMObj: true},
-		"close": &NativeFunction{Value: oc.close},
-	}
-	return &Map{Value: obj}, nil
+	return &Channel{Value: oc, size: size}, nil
 }
 
 // Sends an obj to the channel, will block if channel is full and the VM has not been aborted.
-// Sends to a closed channel causes panic.
 func (oc objchan) send(args ...Object) (Object, error) {
 	vm := args[0].(*VMObj).Value
 	args = args[1:] // the first arg is VMObj inserted by VM
@@ -236,15 +308,14 @@ func (oc objchan) send(args ...Object) (Object, error) {
 		return nil, ErrWrongNumArguments
 	}
 	select {
-		case <-vm.AbortChan:
+	case <-vm.AbortChan:
 		return nil, ErrVMAborted
-		case oc <- args[0]:
+	case oc <- args[0]:
 	}
 	return nil, nil
 }
 
 // Receives an obj from the channel, will block if channel is empty and the VM has not been aborted.
-// Receives from a closed channel returns null value.
 func (oc objchan) recv(args ...Object) (Object, error) {
 	vm := args[0].(*VMObj).Value
 	args = args[1:] // the first arg is VMObj inserted by VM
@@ -252,9 +323,9 @@ func (oc objchan) recv(args ...Object) (Object, error) {
 		return nil, ErrWrongNumArguments
 	}
 	select {
-		case <-vm.AbortChan:
+	case <-vm.AbortChan:
 		return nil, ErrVMAborted
-		case obj, ok := <-oc:
+	case obj, ok := <-oc:
 		if ok {
 			return obj, nil
 		}
@@ -270,7 +341,6 @@ func (oc objchan) close(args ...Object) (Object, error) {
 	close(oc)
 	return nil, nil
 }
-
 
 // WrapFuncCall synchronously executes a callable object from Go space.
 func WrapFuncCall(vm *VM, args ...Object) (retVal Object, err error) {
@@ -291,7 +361,6 @@ func WrapFuncCall(vm *VM, args ...Object) (retVal Object, err error) {
 
 	defer func() {
 		vm.delChild(clone)
-		// Only recover Go space panics and surface them as standard errors
 		if perr := recover(); perr != nil {
 			err = fmt.Errorf("\nRuntime Panic within Native Bridge: %v\n%s", perr, debug.Stack())
 		}
@@ -310,52 +379,3 @@ func WrapFuncCall(vm *VM, args ...Object) (retVal Object, err error) {
 	nargs = append(nargs, args[1:]...)
 	return fn.Call(nargs...)
 }
-
-
-// // WrapFuncCall synchronously executes a callable object from Go space.
-// // It creates a shallow clone of the VM to maintain stack isolation.
-// func WrapFuncCall(vm *VM, args ...Object) (Object, error) {
-	// if len(args) == 0 {
-		// return nil, ErrWrongNumArguments
-	// }
-	
-	// fn := args[0]
-	// if !fn.CanCall() {
-		// return nil, ErrInvalidArgumentType{
-			// Name:     "first",
-			// Expected: "callable function",
-			// Found:    fn.TypeName(),
-		// }
-	// }
-	
-	// cfn, compiled := fn.(*Function)
-	
-	// // Create a shallow clone for execution. 
-	// // This gives us fresh frames and stack, but shares globals.
-	// clone := vm.ShallowClone()
-	
-	// // Link the child VM to the parent so Abort() propagates correctly
-	// if err := vm.addChild(clone); err != nil {
-		// return nil, err
-	// }
-	
-	// // Ensure we cleanup the child reference when execution finishes
-	// defer vm.delChild(clone)
-	
-	// // Execute Compiled Functions
-	// if compiled {
-		// return clone.RunCompiled(cfn, args[1:]...)
-	// }
-	
-	// // Execute Builtin Functions
-	// var nargs []Object
-	// if bltnfn, ok := fn.(*NativeFunction); ok {
-		// if bltnfn.NeedVMObj {
-			// // pass the cloned VM as the first param to builtin functions
-			// nargs = append(nargs, clone.selfObject())
-		// }
-	// }
-	// nargs = append(nargs, args[1:]...)
-	
-	// return fn.Call(nargs...)
-// }

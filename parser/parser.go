@@ -240,6 +240,37 @@ func (p *Parser) parseUnaryExpr() Expr {
 			TokenPos: pos,
 			Expr:     x,
 		}
+	case token.Arrow:
+		pos := p.pos
+		p.next()
+		x := p.parseUnaryExpr()
+		return &RecvExpr{
+			ArrowPos: pos,
+			Chan:     x,
+		}
+	case token.Go:
+		pos := p.pos
+		p.next()
+		call := p.parseUnaryExpr()
+		return &GoExpr{
+			GoPos: pos,
+			Call:  call,
+		}
+	case token.Chan:
+		pos := p.pos
+		p.next()
+		var size Expr
+		if p.token == token.LParen {
+			p.next()
+			if p.token != token.RParen {
+				size = p.parseExpr()
+			}
+			p.expect(token.RParen)
+		}
+		return &MakeChanExpr{
+			ChanPos: pos,
+			Size:    size,
+		}
 	}
 	return p.parsePrimaryExpr()
 }
@@ -1161,7 +1192,7 @@ func (p *Parser) parseStmt() (stmt Stmt) {
 			token.Float, token.Complex, token.Char, token.String, token.Template, token.True, token.False,
 			token.Null, token.Embed, token.LParen, token.LBrace,
 			token.LBrack, token.Add, token.Sub, token.Mul, token.And, token.Xor,
-			token.Not, token.Struct:
+			token.Not, token.Struct, token.Go, token.Chan, token.Arrow:
 			s := p.parseSimpleStmt(false)
 			p.expectSemi()
 			return s
@@ -1497,6 +1528,15 @@ func (p *Parser) parseSimpleStmt(forIn bool) Stmt {
 					Value:    value,
 					Iterable: y,
 				}
+			}
+		case token.Arrow:
+			pos := p.pos
+			p.next()
+			y := p.parseExpr()
+			return &SendStmt{
+				Chan:     x[0],
+				Value:    y,
+				ArrowPos: pos,
 			}
 	}
 
