@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"math/big"
 	"math/cmplx"
@@ -1771,6 +1772,7 @@ func (c *Complex) Equals(x Object) bool {
 // Map represents a map of objects.
 type Map struct {
 	ObjectImpl
+	mu    sync.RWMutex
 	Value map[string]Object
 }
 
@@ -1780,6 +1782,8 @@ func (o *Map) TypeName() string {
 }
 
 func (o *Map) String() string {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
 	var pairs []string
 	for k, v := range o.Value {
 		pairs = append(pairs, fmt.Sprintf("%s: %s", k, v.String()))
@@ -1789,6 +1793,8 @@ func (o *Map) String() string {
 
 // Copy returns a copy of the type.
 func (o *Map) Copy() Object {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
 	c := make(map[string]Object)
 	for k, v := range o.Value {
 		c[k] = v.Copy()
@@ -1798,16 +1804,22 @@ func (o *Map) Copy() Object {
 
 // IsFalsy returns true if the value of the type is falsy.
 func (o *Map) IsFalsy() bool {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
 	return len(o.Value) == 0
 }
 
 // Equals returns true if the value of the type is equal to the value of
 // another object.
 func (o *Map) Equals(x Object) bool {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
 	var xVal map[string]Object
 	switch x := x.(type) {
 	case *Map:
+		x.mu.RLock()
 		xVal = x.Value
+		defer x.mu.RUnlock()
 	case *ImmutableMap:
 		xVal = x.Value
 	default:
@@ -1818,7 +1830,7 @@ func (o *Map) Equals(x Object) bool {
 	}
 	for k, v := range o.Value {
 		tv := xVal[k]
-		if !v.Equals(tv) {
+		if tv == nil || !v.Equals(tv) {
 			return false
 		}
 	}
@@ -1832,7 +1844,9 @@ func (o *Map) IndexGet(index Object) (res Object, err error) {
 		err = ErrInvalidIndexType
 		return
 	}
+	o.mu.RLock()
 	res, ok = o.Value[strIdx]
+	o.mu.RUnlock()
 	if !ok {
 		res = NullValue
 	}
@@ -1846,18 +1860,27 @@ func (o *Map) IndexSet(index, value Object) (err error) {
 		err = ErrInvalidIndexType
 		return
 	}
+	o.mu.Lock()
+	if o.Value == nil {
+		o.Value = make(map[string]Object)
+	}
 	o.Value[strIdx] = value
+	o.mu.Unlock()
 	return nil
 }
 
 // Iterate creates a map iterator.
 func (o *Map) Iterate() Iterator {
+	o.mu.RLock()
+	defer o.mu.RUnlock()
 	var keys []string
-	for k := range o.Value {
+	vCopy := make(map[string]Object, len(o.Value))
+	for k, val := range o.Value {
 		keys = append(keys, k)
+		vCopy[k] = val
 	}
 	return &MapIterator{
-		v: o.Value,
+		v: vCopy,
 		k: keys,
 		l: len(keys),
 	}

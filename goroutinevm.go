@@ -342,6 +342,30 @@ func (oc objchan) close(args ...Object) (Object, error) {
 	return nil, nil
 }
 
+// FastShallowClone creates a lightweight shallow VM clone for synchronous call execution
+// without childCtl lock contention or extra allocation overhead.
+func FastShallowClone(v *VM) *VM {
+	vClone := &VM{
+		constants:   v.constants,
+		sp:          0,
+		globals:     v.globals,
+		fileSet:     v.fileSet,
+		frames:      make([]*frame, 0, initialFrames),
+		framesIndex: 1,
+		ip:          -1,
+		maxAllocs:   v.maxAllocs,
+		AbortChan:   v.AbortChan,
+		In:          v.In,
+		Out:         v.Out,
+		Args:        v.Args,
+	}
+	vClone.frames = append(vClone.frames, &frame{
+		fn: emptyEntry,
+		ip: -1,
+	})
+	return vClone
+}
+
 // WrapFuncCall synchronously executes a callable object from Go space.
 func WrapFuncCall(vm *VM, args ...Object) (retVal Object, err error) {
 	if len(args) == 0 {
@@ -352,28 +376,22 @@ func WrapFuncCall(vm *VM, args ...Object) (retVal Object, err error) {
 		return nil, ErrInvalidArgumentType{Name: "first", Expected: "callable function", Found: fn.TypeName()}
 	}
 	
-	cfn, compiled := fn.(*Function)
-	clone := vm.ShallowClone()
-	
-	if err := vm.addChild(clone); err != nil {
-		return nil, err
-	}
-
 	defer func() {
-		vm.delChild(clone)
 		if perr := recover(); perr != nil {
 			err = fmt.Errorf("\nRuntime Panic within Native Bridge: %v\n%s", perr, debug.Stack())
 		}
 	}()
-	
+
+	cfn, compiled := fn.(*Function)
 	if compiled {
+		clone := FastShallowClone(vm)
 		return clone.RunCompiled(cfn, args[1:]...)
 	}
 	
 	var nargs []Object
 	if bltnfn, ok := fn.(*NativeFunction); ok {
 		if bltnfn.NeedVMObj {
-			nargs = append(nargs, clone.selfObject())
+			nargs = append(nargs, vm.selfObject())
 		}
 	}
 	nargs = append(nargs, args[1:]...)
