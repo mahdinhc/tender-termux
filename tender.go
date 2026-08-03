@@ -155,11 +155,11 @@ func ToStringPretty(vm *VM, o Object) string {
 	}
 	var builder strings.Builder
 	visited := make(map[Object]bool)
-	writeObjectPretty(&builder, o, 0, visited)
+	writeObjectPretty(&builder, o, 0, visited, true)
 	return builder.String()
 }
 
-func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visited map[Object]bool) {
+func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visited map[Object]bool, isTopLevel bool) {
 	indent := strings.Repeat("  ", indentLevel)
 
 	// Check for cycle
@@ -170,6 +170,24 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 	visited[o] = true
 
 	switch obj := o.(type) {
+	case *Matrix[int64]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, false))
+		} else {
+			builder.WriteString(obj.String())
+		}
+	case *Matrix[float64]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, false))
+		} else {
+			builder.WriteString(obj.String())
+		}
+	case *Matrix[complex128]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, false))
+		} else {
+			builder.WriteString(obj.String())
+		}
 	case *ImmutableMap:
 		if len(obj.Value) == 0 {
 			builder.WriteString("{}")
@@ -183,7 +201,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 			for i, k := range keys {
 				v := obj.Value[k]
 				builder.WriteString(indent + "  " + k + ": ")
-				writeObjectPretty(builder, v, indentLevel+1, visited)
+				writeObjectPretty(builder, v, indentLevel+1, visited, false)
 				if i < len(keys)-1 {
 					builder.WriteString(",\n")
 				}
@@ -197,7 +215,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 			builder.WriteString("[\n")
 			for i, elem := range obj.Value {
 				builder.WriteString(indent + "  ")
-				writeObjectPretty(builder, elem, indentLevel+1, visited)
+				writeObjectPretty(builder, elem, indentLevel+1, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(",\n")
 				}
@@ -217,7 +235,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 			for i, k := range keys {
 				v := obj.Value[k]
 				builder.WriteString(indent + "  " + k + ": ")
-				writeObjectPretty(builder, v, indentLevel+1, visited)
+				writeObjectPretty(builder, v, indentLevel+1, visited, false)
 				if i < len(keys)-1 {
 					builder.WriteString(",\n")
 				}
@@ -231,7 +249,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 			builder.WriteString("[\n")
 			for i, elem := range obj.Value {
 				builder.WriteString(indent + "  ")
-				writeObjectPretty(builder, elem, indentLevel+1, visited)
+				writeObjectPretty(builder, elem, indentLevel+1, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(",\n")
 				}
@@ -244,7 +262,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 		} else {
 			builder.WriteString("(")
 			for i, elem := range obj.Value {
-				writeObjectPretty(builder, elem, indentLevel, visited)
+				writeObjectPretty(builder, elem, indentLevel, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(", ")
 				}
@@ -273,7 +291,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 					val = NullValue
 				}
 				builder.WriteString(indent + "  " + f.Name + ": ")
-				writeObjectPretty(builder, val, indentLevel+1, visited)
+				writeObjectPretty(builder, val, indentLevel+1, visited, false)
 				if i < len(obj.Type.Fields)-1 {
 					builder.WriteString(",\n")
 				}
@@ -293,7 +311,7 @@ func writeObjectPretty(builder *strings.Builder, o Object, indentLevel int, visi
 	delete(visited, o)
 }
 
-func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel int, visited map[Object]bool) {
+func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel int, visited map[Object]bool, isTopLevel bool) {
 	indent := strings.Repeat("  ", indentLevel)
 
 	// Check for cycle
@@ -304,6 +322,24 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 	visited[o] = true
 
 	switch obj := o.(type) {
+	case *Matrix[int64]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, true))
+		} else {
+			builder.WriteString(obj.String())
+		}
+	case *Matrix[float64]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, true))
+		} else {
+			builder.WriteString(obj.String())
+		}
+	case *Matrix[complex128]:
+		if isTopLevel {
+			builder.WriteString(PrettyMatrix(obj, true))
+		} else {
+			builder.WriteString(obj.String())
+		}
 	case *ImmutableMap:
 		if len(obj.Value) == 0 {
 			builder.WriteString("{}")
@@ -317,7 +353,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 			for i, k := range keys {
 				v := obj.Value[k]
 				builder.WriteString(indent + "  " + k + ": ")
-				writeObjectPrettyColored(builder, v, indentLevel+1, visited)
+				writeObjectPrettyColored(builder, v, indentLevel+1, visited, false)
 				if i < len(keys)-1 {
 					builder.WriteString(",\n")
 				}
@@ -331,7 +367,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 			builder.WriteString("[\n")
 			for i, elem := range obj.Value {
 				builder.WriteString(indent + "  ")
-				writeObjectPrettyColored(builder, elem, indentLevel+1, visited)
+				writeObjectPrettyColored(builder, elem, indentLevel+1, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(",\n")
 				}
@@ -351,7 +387,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 			for i, k := range keys {
 				v := obj.Value[k]
 				builder.WriteString(indent + "  " + k + ": ")
-				writeObjectPrettyColored(builder, v, indentLevel+1, visited)
+				writeObjectPrettyColored(builder, v, indentLevel+1, visited, false)
 				if i < len(keys)-1 {
 					builder.WriteString(",\n")
 				}
@@ -365,7 +401,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 			builder.WriteString("[\n")
 			for i, elem := range obj.Value {
 				builder.WriteString(indent + "  ")
-				writeObjectPrettyColored(builder, elem, indentLevel+1, visited)
+				writeObjectPrettyColored(builder, elem, indentLevel+1, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(",\n")
 				}
@@ -378,7 +414,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 		} else {
 			builder.WriteString("(")
 			for i, elem := range obj.Value {
-				writeObjectPrettyColored(builder, elem, indentLevel, visited)
+				writeObjectPrettyColored(builder, elem, indentLevel, visited, false)
 				if i < len(obj.Value)-1 {
 					builder.WriteString(", ")
 				}
@@ -407,7 +443,7 @@ func writeObjectPrettyColored(builder *strings.Builder, o Object, indentLevel in
 					val = NullValue
 				}
 				builder.WriteString(indent + "  " + f.Name + ": ")
-				writeObjectPrettyColored(builder, val, indentLevel+1, visited)
+				writeObjectPrettyColored(builder, val, indentLevel+1, visited, false)
 				if i < len(obj.Type.Fields)-1 {
 					builder.WriteString(",\n")
 				}
@@ -451,7 +487,7 @@ func ToStringPrettyColored(vm *VM, o Object) string {
 	}
 	var builder strings.Builder
 	visited := make(map[Object]bool)
-	writeObjectPrettyColored(&builder, o, 0, visited)
+	writeObjectPrettyColored(&builder, o, 0, visited, true)
 	return builder.String()
 }
 

@@ -12,6 +12,8 @@ import (
 	"image/draw"
 	"os"
 	"bytes"
+	"fmt"
+	
 	"github.com/2dprototype/tender"
 )
 
@@ -345,6 +347,353 @@ func makeImage(img image.Image) *tender.ImmutableMap {
 					return nil, nil
 				},
 			},
+		
+			// Channel getters
+			"get_red": &tender.NativeFunction{
+				Name: "get_red",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					data := make([]int64, width*height)
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							data[idx] = int64(rgbaImage.RGBAAt(x, y).R)
+						}
+					}
+					
+					return &tender.Matrix[int64]{
+						Rows: height,
+						Cols: width,
+						Data: data,
+					}, nil
+				},
+			},
+			"get_green": &tender.NativeFunction{
+				Name: "get_green",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					data := make([]int64, width*height)
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							data[idx] = int64(rgbaImage.RGBAAt(x, y).G)
+						}
+					}
+					
+					return &tender.Matrix[int64]{
+						Rows: height,
+						Cols: width,
+						Data: data,
+					}, nil
+				},
+			},
+			"get_blue": &tender.NativeFunction{
+				Name: "get_blue",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					data := make([]int64, width*height)
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							data[idx] = int64(rgbaImage.RGBAAt(x, y).B)
+						}
+					}
+					
+					return &tender.Matrix[int64]{
+						Rows: height,
+						Cols: width,
+						Data: data,
+					}, nil
+				},
+			},
+			"get_alpha": &tender.NativeFunction{
+				Name: "get_alpha",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 0 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					data := make([]int64, width*height)
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							data[idx] = int64(rgbaImage.RGBAAt(x, y).A)
+						}
+					}
+					
+					return &tender.Matrix[int64]{
+						Rows: height,
+						Cols: width,
+						Data: data,
+					}, nil
+				},
+			},
+
+			// Channel setters
+			"set_red": &tender.NativeFunction{
+				Name: "set_red",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					mat, ok := args[0].(*tender.Matrix[int64])
+					if !ok {
+						return nil, tender.ErrInvalidArgumentType{
+							Name:     "matrix",
+							Expected: "matrix:int",
+							Found:    args[0].TypeName(),
+						}
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					// Check dimensions
+					if mat.Rows != height || mat.Cols != width {
+						return &tender.Error{
+							Value: &tender.String{
+								Value: fmt.Sprintf("matrix dimensions mismatch: expected %dx%d, got %dx%d", 
+									height, width, mat.Rows, mat.Cols),
+							},
+						}, nil
+					}
+					
+					// Set red channel
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							val := mat.Data[idx]
+							if val < 0 || val > 255 {
+								return &tender.Error{
+									Value: &tender.String{
+										Value: fmt.Sprintf("value out of range (0-255): %d at (%d,%d)", val, x, y),
+									},
+								}, nil
+							}
+							c := rgbaImage.RGBAAt(x, y)
+							c.R = uint8(val)
+							rgbaImage.SetRGBA(x, y, c)
+						}
+					}
+					
+					return nil, nil
+				},
+			},
+			"set_green": &tender.NativeFunction{
+				Name: "set_green",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					mat, ok := args[0].(*tender.Matrix[int64])
+					if !ok {
+						return nil, tender.ErrInvalidArgumentType{
+							Name:     "matrix",
+							Expected: "matrix:int",
+							Found:    args[0].TypeName(),
+						}
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					if mat.Rows != height || mat.Cols != width {
+						return &tender.Error{
+							Value: &tender.String{
+								Value: fmt.Sprintf("matrix dimensions mismatch: expected %dx%d, got %dx%d", 
+									height, width, mat.Rows, mat.Cols),
+							},
+						}, nil
+					}
+					
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							val := mat.Data[idx]
+							if val < 0 || val > 255 {
+								return &tender.Error{
+									Value: &tender.String{
+										Value: fmt.Sprintf("value out of range (0-255): %d at (%d,%d)", val, x, y),
+									},
+								}, nil
+							}
+							c := rgbaImage.RGBAAt(x, y)
+							c.G = uint8(val)
+							rgbaImage.SetRGBA(x, y, c)
+						}
+					}
+					
+					return nil, nil
+				},
+			},
+			"set_blue": &tender.NativeFunction{
+				Name: "set_blue",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					mat, ok := args[0].(*tender.Matrix[int64])
+					if !ok {
+						return nil, tender.ErrInvalidArgumentType{
+							Name:     "matrix",
+							Expected: "matrix:int",
+							Found:    args[0].TypeName(),
+						}
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					if mat.Rows != height || mat.Cols != width {
+						return &tender.Error{
+							Value: &tender.String{
+								Value: fmt.Sprintf("matrix dimensions mismatch: expected %dx%d, got %dx%d", 
+									height, width, mat.Rows, mat.Cols),
+							},
+						}, nil
+					}
+					
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							val := mat.Data[idx]
+							if val < 0 || val > 255 {
+								return &tender.Error{
+									Value: &tender.String{
+										Value: fmt.Sprintf("value out of range (0-255): %d at (%d,%d)", val, x, y),
+									},
+								}, nil
+							}
+							c := rgbaImage.RGBAAt(x, y)
+							c.B = uint8(val)
+							rgbaImage.SetRGBA(x, y, c)
+						}
+					}
+					
+					return nil, nil
+				},
+			},
+			"set_alpha": &tender.NativeFunction{
+				Name: "set_alpha",
+				Value: func(args ...tender.Object) (tender.Object, error) {
+					if len(args) != 1 {
+						return nil, tender.ErrWrongNumArguments
+					}
+					
+					mat, ok := args[0].(*tender.Matrix[int64])
+					if !ok {
+						return nil, tender.ErrInvalidArgumentType{
+							Name:     "matrix",
+							Expected: "matrix:int",
+							Found:    args[0].TypeName(),
+						}
+					}
+					
+					rgbaImage, ok := img.(*image.RGBA)
+					if !ok {
+						return nil, nil
+					}
+					
+					bounds := img.Bounds()
+					width := bounds.Dx()
+					height := bounds.Dy()
+					
+					if mat.Rows != height || mat.Cols != width {
+						return &tender.Error{
+							Value: &tender.String{
+								Value: fmt.Sprintf("matrix dimensions mismatch: expected %dx%d, got %dx%d", 
+									height, width, mat.Rows, mat.Cols),
+							},
+						}, nil
+					}
+					
+					for y := 0; y < height; y++ {
+						for x := 0; x < width; x++ {
+							idx := y*width + x
+							val := mat.Data[idx]
+							if val < 0 || val > 255 {
+								return &tender.Error{
+									Value: &tender.String{
+										Value: fmt.Sprintf("value out of range (0-255): %d at (%d,%d)", val, x, y),
+									},
+								}, nil
+							}
+							c := rgbaImage.RGBAAt(x, y)
+							c.A = uint8(val)
+							rgbaImage.SetRGBA(x, y, c)
+						}
+					}
+					
+					return nil, nil
+				},
+			},
+		
 		},
 	}
 }
