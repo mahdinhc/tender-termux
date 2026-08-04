@@ -528,11 +528,11 @@ func (v *VM) run() {
 			}
 		case parser.OpNullJump:
 			v.ip += 2
-			if _, ok := v.stack[v.sp-1].(*Null); ok {
+			val := v.stack[v.sp-1]
+			if isNullOrUnindexable(val) {
+				v.stack[v.sp-1] = NullValue
 				pos := int(v.curInsts[v.ip]) | int(v.curInsts[v.ip-1])<<8
 				v.ip = pos - 1
-			} else {
-				// keep value on stack
 			}
 		case parser.OpNotNullJump:
 			v.ip += 2
@@ -783,7 +783,7 @@ func (v *VM) run() {
 			val, err := left.IndexGet(index)
 			if err != nil {
 				if err == ErrNotIndexable {
-					v.err = fmt.Errorf("not indexable: %s", index.TypeName())
+					v.err = fmt.Errorf("not indexable: %s", left.TypeName())
 					return
 				}
 				if err == ErrInvalidIndexType {
@@ -1451,4 +1451,15 @@ func indexAssign(dst, src Object, selectors []Object) error {
 		return err
 	}
 	return nil
+}
+
+func isNullOrUnindexable(val Object) bool {
+	if val == nil || val == NullValue {
+		return true
+	}
+	if _, ok := val.(*Null); ok {
+		return true
+	}
+	_, err := val.IndexGet(NullValue)
+	return err == ErrNotIndexable
 }

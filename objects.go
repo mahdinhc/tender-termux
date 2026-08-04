@@ -2325,11 +2325,6 @@ func (o *Null) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	return nil, ErrInvalidOperator
 }
 
-// IndexGet returns an element at a given index.
-func (o *Null) IndexGet(_ Object) (Object, error) {
-	return NullValue, nil
-}
-
 // Iterate creates a map iterator.
 func (o *Null) Iterate() Iterator {
 	return o
