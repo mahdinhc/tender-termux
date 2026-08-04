@@ -57,6 +57,7 @@ const (
 	OpMakeChan                    // Create channel
 	OpSendChan                    // Send to channel
 	OpRecvChan                    // Receive from channel
+	OpDefer                       // Defer function call
 )
 
 // OpcodeNames are string representation of opcodes.
@@ -113,6 +114,7 @@ var OpcodeNames = [...]string{
 	OpMakeChan:      "MAKECHAN",
 	OpSendChan:      "SENDCHAN",
 	OpRecvChan:      "RECVCHAN",
+	OpDefer:         "DEFER",
 }
 
 // OpcodeOperands is the number of operands.
@@ -169,6 +171,7 @@ var OpcodeOperands = [...][]int{
 	OpMakeChan:      {},
 	OpSendChan:      {},
 	OpRecvChan:      {},
+	OpDefer:         {1},
 }
 
 // ReadOperands reads operands from the bytecode.

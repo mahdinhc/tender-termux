@@ -683,6 +683,20 @@ func (c *Compiler) Compile(node parser.Node) error {
 			}
 			c.emit(node, parser.OpReturn, 1)
 		}
+	case *parser.DeferStmt:
+		call, ok := node.Call.(*parser.CallExpr)
+		if !ok {
+			return c.errorf(node, "defer requires function call")
+		}
+		if err := c.Compile(call.Func); err != nil {
+			return err
+		}
+		for _, arg := range call.Args {
+			if err := c.Compile(arg); err != nil {
+				return err
+			}
+		}
+		c.emit(node, parser.OpDefer, len(call.Args))
 	case *parser.CallExpr:
 		if node.Optional {
 			if err := c.Compile(node.Func); err != nil {

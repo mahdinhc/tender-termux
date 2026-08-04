@@ -14,12 +14,18 @@ import (
 	"github.com/2dprototype/tender/token"
 )
 
+type deferredCall struct {
+	fn   Object
+	args []Object
+}
+
 // frame represents a function call frame.
 type frame struct {
 	fn          *Function
 	freeVars    []*ObjectPtr
 	ip          int
 	basePointer int
+	defers      []deferredCall
 }
 
 type vmChildCtl struct {
@@ -1119,6 +1125,21 @@ func (v *VM) run() {
 				v.stack[v.sp] = ret
 				v.sp++
 			}
+		case parser.OpDefer:
+			numArgs := int(v.curInsts[v.ip+1])
+			v.ip++
+			fn := v.stack[v.sp-1-numArgs]
+			if !fn.CanCall() {
+				v.err = fmt.Errorf("not callable: %s", fn.TypeName())
+				return
+			}
+			args := make([]Object, numArgs)
+			copy(args, v.stack[v.sp-numArgs:v.sp])
+			v.sp -= numArgs + 1
+			v.curFrame.defers = append(v.curFrame.defers, deferredCall{
+				fn:   fn,
+				args: args,
+			})
 		case parser.OpReturn:
 			v.ip++
 			var retVal Object
@@ -1127,16 +1148,18 @@ func (v *VM) run() {
 			} else {
 				retVal = NullValue
 			}
-			//v.sp--
+			for len(v.curFrame.defers) > 0 {
+				idx := len(v.curFrame.defers) - 1
+				d := v.curFrame.defers[idx]
+				v.curFrame.defers = v.curFrame.defers[:idx]
+				_ = v.runDeferredCall(d)
+			}
 			v.framesIndex--
 			v.curFrame = v.frames[v.framesIndex-1]
 			v.curInsts = v.curFrame.fn.Instructions
 			v.ip = v.curFrame.ip
-			//v.sp = lastFrame.basePointer - 1
 			v.sp = v.frames[v.framesIndex].basePointer
-			// skip stack overflow check because (newSP) <= (oldSP)
 			v.stack[v.sp-1] = retVal
-			//v.sp++
 		case parser.OpDefineLocal:
 			v.ip++
 			localIndex := int(v.curInsts[v.ip])
@@ -1462,4 +1485,21 @@ func isNullOrUnindexable(val Object) bool {
 	}
 	_, err := val.IndexGet(NullValue)
 	return err == ErrNotIndexable
+}
+
+func (v *VM) runDeferredCall(d deferredCall) error {
+	if fn, ok := d.fn.(*Function); ok {
+		clone := v.ShallowClone()
+		_, err := clone.RunCompiled(fn, d.args...)
+		return err
+	}
+	var nargs []Object
+	if bltnfn, ok := d.fn.(*NativeFunction); ok {
+		if bltnfn.NeedVMObj {
+			nargs = append(nargs, v.selfObject())
+		}
+	}
+	nargs = append(nargs, d.args...)
+	_, err := d.fn.Call(nargs...)
+	return err
 }

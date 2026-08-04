@@ -102,6 +102,7 @@ const (
 	Struct
 	Go
 	Chan
+	Defer
 	// Please
 	_keywordEnd
 )
@@ -194,6 +195,7 @@ var tokens = [...]string{
 	Struct:       "struct",
 	Go:           "go",
 	Chan:         "chan",
+	Defer:        "defer",
 	// Please:       "please",
 }
 

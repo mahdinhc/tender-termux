@@ -1210,6 +1210,8 @@ func (p *Parser) parseStmt() (stmt Stmt) {
 			return s
 		case token.Return:
 			return p.parseReturnStmt()
+		case token.Defer:
+			return p.parseDeferStmt()
 		case token.Export:
 			return p.parseExportStmt()
 		case token.If:
@@ -1471,6 +1473,22 @@ func (p *Parser) parseReturnStmt() Stmt {
 	return &ReturnStmt{
 		ReturnPos: pos,
 		Result:    x,
+	}
+}
+
+func (p *Parser) parseDeferStmt() Stmt {
+	if p.trace {
+		defer untracep(tracep(p, "DeferStmt"))
+	}
+
+	pos := p.pos
+	p.expect(token.Defer)
+
+	call := p.parseExpr()
+	p.expectSemi()
+	return &DeferStmt{
+		DeferPos: pos,
+		Call:     call,
 	}
 }
 

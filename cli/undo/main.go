@@ -1086,6 +1086,22 @@ func (fd *FunctionDecompiler) decompileBlock(startIP, endIP int, stack []string,
 				// fd.lastCallExpr = callExpr
 			}
 
+		case parser.OpDefer:
+			numArgs := operands[0]
+			var args []string
+			for k := 0; k < numArgs; k++ {
+				if len(stack) > 0 {
+					args = append([]string{stack[len(stack)-1]}, args...)
+					stack = stack[:len(stack)-1]
+				}
+			}
+			if len(stack) > 0 {
+				fnStr := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				callExpr := fmt.Sprintf("%s(%s)", fnStr, strings.Join(args, ", "))
+				code = append(code, fmt.Sprintf("%sdefer %s", indent, callExpr))
+			}
+
 		case parser.OpClosure:
 			constIdx := operands[0]
 			numFree := operands[1]
