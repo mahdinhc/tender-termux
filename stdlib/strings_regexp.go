@@ -137,46 +137,25 @@ func makeStringsRegexp(re *regexp.Regexp) *tender.ImmutableMap {
 
 			// replace(src, repl) => string
 			"replace": &tender.NativeFunction{
-				Value: func(args ...tender.Object) (
-					ret tender.Object,
-					err error,
-				) {
+				Value: func(args ...tender.Object) (ret tender.Object, err error) {
 					if len(args) != 2 {
 						err = tender.ErrWrongNumArguments
 						return
 					}
-
 					s1, ok := tender.ToString(args[0])
 					if !ok {
-						err = tender.ErrInvalidArgumentType{
-							Name:     "first",
-							Expected: "string(compatible)",
-							Found:    args[0].TypeName(),
-						}
+						err = tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 						return
 					}
-
 					s2, ok := tender.ToString(args[1])
 					if !ok {
-						err = tender.ErrInvalidArgumentType{
-							Name:     "second",
-							Expected: "string(compatible)",
-							Found:    args[1].TypeName(),
-						}
+						err = tender.ErrInvalidArgumentType{Name: "second", Expected: "string(compatible)", Found: args[1].TypeName()}
 						return
 					}
-
-					s, ok := doStringsRegexpReplace(re, s1, s2)
-					if !ok {
-						return nil, tender.ErrStringLimit
-					}
-
-					ret = &tender.String{Value: s}
-
+					ret = &tender.String{Value: re.ReplaceAllString(s1, s2)}
 					return
 				},
 			},
-
 			// split(strings) 			 => array(string)
 			// split(strings, maxCount) => array(string)
 			"split": &tender.NativeFunction{
@@ -226,26 +205,4 @@ func makeStringsRegexp(re *regexp.Regexp) *tender.ImmutableMap {
 			},
 		},
 	}
-}
-
-// Size-limit checking implementation of regexp.ReplaceAllString.
-func doStringsRegexpReplace(re *regexp.Regexp, src, repl string) (string, bool) {
-	idx := 0
-	out := ""
-	for _, m := range re.FindAllStringSubmatchIndex(src, -1) {
-		var exp []byte
-		exp = re.ExpandString(exp, repl, src, m)
-		if len(out)+m[0]-idx+len(exp) > tender.MaxStringLen {
-			return "", false
-		}
-		out += src[idx:m[0]] + string(exp)
-		idx = m[1]
-	}
-	if idx < len(src) {
-		if len(out)+len(src)-idx > tender.MaxStringLen {
-			return "", false
-		}
-		out += src[idx:]
-	}
-	return out, true
 }

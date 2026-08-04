@@ -10,16 +10,6 @@ import (
 	"math/big"
 )
 
-var (
-	// MaxStringLen is the maximum byte-length for string value. Note this
-	// limit applies to all compiler/VM instances in the process.
-	MaxStringLen = 2147483647
-
-	// MaxBytesLen is the maximum length for bytes value. Note this limit
-	// applies to all compiler/VM instances in the process.
-	MaxBytesLen = 2147483647
-)
-
 const (
 	// GlobalsSize is the maximum number of global variables for a VM.
 	GlobalsSize = 10240
@@ -969,9 +959,6 @@ func FromInterface(v interface{}) (Object, error) {
 	case nil:
 		return NullValue, nil
 	case string:
-		if len(v) > MaxStringLen {
-			return nil, ErrStringLimit
-		}
 		return &String{Value: v}, nil
 	case int64:
 		return &Int{Value: v}, nil
@@ -989,9 +976,6 @@ func FromInterface(v interface{}) (Object, error) {
 	case float64:
 		return &Float{Value: v}, nil
 	case []byte:
-		if len(v) > MaxBytesLen {
-			return nil, ErrBytesLimit
-		}
 		return &Bytes{Value: v}, nil
 	case error:
 		return &Error{Value: &String{Value: v.Error()}}, nil

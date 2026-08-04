@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/2dprototype/tender"
 )
@@ -372,12 +371,7 @@ func stringsREReplace(args ...tender.Object) (ret tender.Object, err error) {
 	if err != nil {
 		ret = wrapError(err)
 	} else {
-		s, ok := doStringsRegexpReplace(re, s2, s3)
-		if !ok {
-			return nil, tender.ErrStringLimit
-		}
-
-		ret = &tender.String{Value: s}
+		ret = &tender.String{Value: re.ReplaceAllString(s2, s3)}
 	}
 
 	return
@@ -470,56 +464,27 @@ func stringsReplace(args ...tender.Object) (ret tender.Object, err error) {
 		err = tender.ErrWrongNumArguments
 		return
 	}
-
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 		return
 	}
-
 	s2, ok := tender.ToString(args[1])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "second",
-			Expected: "string(compatible)",
-			Found:    args[1].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "second", Expected: "string(compatible)", Found: args[1].TypeName()}
 		return
 	}
-
 	s3, ok := tender.ToString(args[2])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "third",
-			Expected: "string(compatible)",
-			Found:    args[2].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "third", Expected: "string(compatible)", Found: args[2].TypeName()}
 		return
 	}
-
-	i4, ok := tender.ToInt(args[3])
+	n, ok := tender.ToInt(args[3])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "fourth",
-			Expected: "int(compatible)",
-			Found:    args[3].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "fourth", Expected: "int(compatible)", Found: args[3].TypeName()}
 		return
 	}
-
-	s, ok := doStringsReplace(s1, s2, s3, i4)
-	if !ok {
-		err = tender.ErrStringLimit
-		return
-	}
-
-	ret = &tender.String{Value: s}
-
-	return
+	return &tender.String{Value: strings.Replace(s1, s2, s3, n)}, nil
 }
 
 func stringsSubstring(args ...tender.Object) (ret tender.Object, err error) {
@@ -591,60 +556,37 @@ func stringsPadLeft(args ...tender.Object) (ret tender.Object, err error) {
 		err = tender.ErrWrongNumArguments
 		return
 	}
-
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 		return
 	}
-
 	i2, ok := tender.ToInt(args[1])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "second",
-			Expected: "int(compatible)",
-			Found:    args[1].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "second", Expected: "int(compatible)", Found: args[1].TypeName()}
 		return
 	}
-
-	if i2 > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
-	}
-
 	sLen := len(s1)
 	if sLen >= i2 {
 		ret = &tender.String{Value: s1}
 		return
 	}
-
 	s3 := " "
 	if argslen == 3 {
 		s3, ok = tender.ToString(args[2])
 		if !ok {
-			err = tender.ErrInvalidArgumentType{
-				Name:     "third",
-				Expected: "string(compatible)",
-				Found:    args[2].TypeName(),
-			}
+			err = tender.ErrInvalidArgumentType{Name: "third", Expected: "string(compatible)", Found: args[2].TypeName()}
 			return
 		}
 	}
-
 	padStrLen := len(s3)
 	if padStrLen == 0 {
 		ret = &tender.String{Value: s1}
 		return
 	}
-
 	padCount := ((i2 - padStrLen) / padStrLen) + 1
 	retStr := strings.Repeat(s3, padCount) + s1
 	ret = &tender.String{Value: retStr[len(retStr)-i2:]}
-
 	return
 }
 
@@ -654,60 +596,37 @@ func stringsPadRight(args ...tender.Object) (ret tender.Object, err error) {
 		err = tender.ErrWrongNumArguments
 		return
 	}
-
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 		return
 	}
-
 	i2, ok := tender.ToInt(args[1])
 	if !ok {
-		err = tender.ErrInvalidArgumentType{
-			Name:     "second",
-			Expected: "int(compatible)",
-			Found:    args[1].TypeName(),
-		}
+		err = tender.ErrInvalidArgumentType{Name: "second", Expected: "int(compatible)", Found: args[1].TypeName()}
 		return
 	}
-
-	if i2 > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
-	}
-
 	sLen := len(s1)
 	if sLen >= i2 {
 		ret = &tender.String{Value: s1}
 		return
 	}
-
 	s3 := " "
 	if argslen == 3 {
 		s3, ok = tender.ToString(args[2])
 		if !ok {
-			err = tender.ErrInvalidArgumentType{
-				Name:     "third",
-				Expected: "string(compatible)",
-				Found:    args[2].TypeName(),
-			}
+			err = tender.ErrInvalidArgumentType{Name: "third", Expected: "string(compatible)", Found: args[2].TypeName()}
 			return
 		}
 	}
-
 	padStrLen := len(s3)
 	if padStrLen == 0 {
 		ret = &tender.String{Value: s1}
 		return
 	}
-
 	padCount := ((i2 - padStrLen) / padStrLen) + 1
 	retStr := s1 + strings.Repeat(s3, padCount)
 	ret = &tender.String{Value: retStr[:i2]}
-
 	return
 }
 
@@ -715,29 +634,14 @@ func stringsRepeat(args ...tender.Object) (ret tender.Object, err error) {
 	if len(args) != 2 {
 		return nil, tender.ErrWrongNumArguments
 	}
-
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 	}
-
 	i2, ok := tender.ToInt(args[1])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "second",
-			Expected: "int(compatible)",
-			Found:    args[1].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "second", Expected: "int(compatible)", Found: args[1].TypeName()}
 	}
-
-	if len(s1)*i2 > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
-	}
-
 	return &tender.String{Value: strings.Repeat(s1, i2)}, nil
 }
 
@@ -745,58 +649,31 @@ func stringsJoin(args ...tender.Object) (ret tender.Object, err error) {
 	if len(args) != 2 {
 		return nil, tender.ErrWrongNumArguments
 	}
-
-	var slen int
 	var ss1 []string
 	switch arg0 := args[0].(type) {
 	case *tender.Array:
 		for idx, a := range arg0.Value {
 			as, ok := tender.ToString(a)
 			if !ok {
-				return nil, tender.ErrInvalidArgumentType{
-					Name:     fmt.Sprintf("first[%d]", idx),
-					Expected: "string(compatible)",
-					Found:    a.TypeName(),
-				}
+				return nil, tender.ErrInvalidArgumentType{Name: fmt.Sprintf("first[%d]", idx), Expected: "string(compatible)", Found: a.TypeName()}
 			}
-			slen += len(as)
 			ss1 = append(ss1, as)
 		}
 	case *tender.ImmutableArray:
 		for idx, a := range arg0.Value {
 			as, ok := tender.ToString(a)
 			if !ok {
-				return nil, tender.ErrInvalidArgumentType{
-					Name:     fmt.Sprintf("first[%d]", idx),
-					Expected: "string(compatible)",
-					Found:    a.TypeName(),
-				}
+				return nil, tender.ErrInvalidArgumentType{Name: fmt.Sprintf("first[%d]", idx), Expected: "string(compatible)", Found: a.TypeName()}
 			}
-			slen += len(as)
 			ss1 = append(ss1, as)
 		}
 	default:
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "array",
-			Found:    args[0].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "first", Expected: "array", Found: args[0].TypeName()}
 	}
-
 	s2, ok := tender.ToString(args[1])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "second",
-			Expected: "string(compatible)",
-			Found:    args[1].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "second", Expected: "string(compatible)", Found: args[1].TypeName()}
 	}
-
-	// make sure output length does not exceed the limit
-	if slen+len(s2)*(len(ss1)-1) > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
-	}
-
 	return &tender.String{Value: strings.Join(ss1, s2)}, nil
 }
 
@@ -1016,53 +893,4 @@ func stringsParseInt(args ...tender.Object) (tender.Object, error) {
 	}
 	
 	return &tender.Int{Value: parsed}, nil
-}
-
-// Modified implementation of strings.Replace
-// to limit the maximum length of output string.
-func doStringsReplace(s, old, new string, n int) (string, bool) {
-	if old == new || n == 0 {
-		return s, true // avoid allocation
-	}
-
-	// Compute number of replacements.
-	if m := strings.Count(s, old); m == 0 {
-		return s, true // avoid allocation
-	} else if n < 0 || m < n {
-		n = m
-	}
-
-	// Apply replacements to buffer.
-	t := make([]byte, len(s)+n*(len(new)-len(old)))
-	w := 0
-	start := 0
-	for i := 0; i < n; i++ {
-		j := start
-		if len(old) == 0 {
-			if i > 0 {
-				_, wid := utf8.DecodeRuneInString(s[start:])
-				j += wid
-			}
-		} else {
-			j += strings.Index(s[start:], old)
-		}
-
-		ssj := s[start:j]
-		if w+len(ssj)+len(new) > tender.MaxStringLen {
-			return "", false
-		}
-
-		w += copy(t[w:], ssj)
-		w += copy(t[w:], new)
-		start = j + len(old)
-	}
-
-	ss := s[start:]
-	if w+len(ss) > tender.MaxStringLen {
-		return "", false
-	}
-
-	w += copy(t[w:], ss)
-
-	return string(t[0:w]), true
 }

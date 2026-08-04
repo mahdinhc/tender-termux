@@ -313,6 +313,15 @@ func (o *Bool) Equals(x Object) bool {
 	return o == x
 }
 
+func (o *Bool) BinaryOp(op token.Token, rhs Object) (Object, error) {
+	if op == token.Add {
+		if strRhs, ok := rhs.(*String); ok {
+			return &String{Value: o.String() + strRhs.Value}, nil
+		}
+	}
+	return nil, ErrInvalidOperator
+}
+
 // GobDecode decodes bool value from input bytes.
 func (o *Bool) GobDecode(b []byte) (err error) {
 	o.value = b[0] == 1
@@ -430,10 +439,9 @@ func (o *Bytes) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch op {
 	case token.Add:
 		switch rhs := rhs.(type) {
+		case *String:
+			return &String{Value: o.String() + rhs.Value}, nil
 		case *Bytes:
-			if len(o.Value)+len(rhs.Value) > MaxBytesLen {
-				return nil, ErrBytesLimit
-			}
 			return &Bytes{Value: append(o.Value, rhs.Value...)}, nil
 		}
 	}
@@ -542,6 +550,10 @@ func (o *Char) TypeName() string {
 // operator and a right-hand side object.
 func (o *Char) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch rhs := rhs.(type) {
+	case *String:
+		if op == token.Add {
+			return &String{Value: o.String() + rhs.Value}, nil
+		}
 	case *Char:
 		switch op {
 		case token.Add:
@@ -1071,6 +1083,10 @@ func (o *Float) TypeName() string {
 // operator and a right-hand side object.
 func (o *Float) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch rhs := rhs.(type) {
+	case *String:
+		if op == token.Add {
+			return &String{Value: o.String() + rhs.Value}, nil
+		}
 	case *Float:
 		switch op {
 		case token.Add:
@@ -1242,6 +1258,10 @@ func (o *Int) TypeName() string {
 // operator and a right-hand side object.
 func (o *Int) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch rhs := rhs.(type) {
+	case *String:
+		if op == token.Add {
+			return &String{Value: o.String() + rhs.Value}, nil
+		}
 	case *Int:
 		switch op {
 		case token.Add:
@@ -1553,6 +1573,10 @@ func binaryOpBigInt (op token.Token, lhs *big.Int, rhs *big.Int) Object {
 // BinaryOp performs binary operations with another Object.
 func (b *BigInt) BinaryOp(op token.Token, rhs Object) (Object, error) {
     switch rhs := rhs.(type) {
+		case *String:
+			if op == token.Add {
+				return &String{Value: b.String() + rhs.Value}, nil
+			}
 		case *BigInt:
 			return binaryOpBigInt(op, b.Value, rhs.Value), nil
 		case *Float:
@@ -1658,6 +1682,10 @@ func binaryOpBigFloat (op token.Token, lhs *big.Float, rhs *big.Float) Object {
 // BinaryOp performs binary operations with another Object.
 func (b *BigFloat) BinaryOp(op token.Token, rhs Object) (Object, error) {
     switch rhs := rhs.(type) {
+		case *String:
+			if op == token.Add {
+				return &String{Value: b.String() + rhs.Value}, nil
+			}
 		case *BigFloat:
 			return binaryOpBigFloat(op, b.Value, rhs.Value), nil
 		case *Float:
@@ -1731,6 +1759,10 @@ func (c *Complex) TypeName() string {
 // BinaryOp performs binary operations with another Object.
 func (c *Complex) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch rhs := rhs.(type) {
+	case *String:
+		if op == token.Add {
+			return &String{Value: c.String() + rhs.Value}, nil
+		}
 	case *Complex:
 		return binaryOpComplex(op, c.Value, rhs.Value), nil
 	case *Float:
@@ -1957,16 +1989,11 @@ func (o *String) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	case token.Add:
 		switch rhs := rhs.(type) {
 		case *String:
-			if len(o.Value)+len(rhs.Value) > MaxStringLen {
-				return nil, ErrStringLimit
-			}
 			return &String{Value: o.Value + rhs.Value}, nil
+		case *Int, *Float, *Char, *Bool, *BigInt, *BigFloat, *Complex, *Time, *Bytes, *Null:
+			return &String{Value: o.Value + rhs.String()}, nil
 		default:
-			rhsStr := rhs.String()
-			if len(o.Value)+len(rhsStr) > MaxStringLen {
-				return nil, ErrStringLimit
-			}
-			return &String{Value: o.Value + rhsStr}, nil
+			return nil, ErrInvalidOperator
 		}
 	case token.Less:
 		switch rhs := rhs.(type) {
@@ -2186,6 +2213,10 @@ func (o *Time) TypeName() string {
 // operator and a right-hand side object.
 func (o *Time) BinaryOp(op token.Token, rhs Object) (Object, error) {
 	switch rhs := rhs.(type) {
+	case *String:
+		if op == token.Add {
+			return &String{Value: o.String() + rhs.Value}, nil
+		}
 	case *Int:
 		switch op {
 		case token.Add: // time + int => time
@@ -2283,6 +2314,15 @@ func (o *Null) IsFalsy() bool {
 // another object.
 func (o *Null) Equals(x Object) bool {
 	return o == x
+}
+
+func (o *Null) BinaryOp(op token.Token, rhs Object) (Object, error) {
+	if op == token.Add {
+		if strRhs, ok := rhs.(*String); ok {
+			return &String{Value: o.String() + strRhs.Value}, nil
+		}
+	}
+	return nil, ErrInvalidOperator
 }
 
 // IndexGet returns an element at a given index.

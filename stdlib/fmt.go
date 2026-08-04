@@ -169,10 +169,6 @@ func fmtScanln(args ...tender.Object) (ret tender.Object, err error) {
 	// for _, arg := range args {
 		// s, _ := tender.ToString(arg)
 		// slen := len(s)
-		// // make sure length does not exceed the limit
-		// if l+slen > tender.MaxStringLen {
-			// return nil, tender.ErrStringLimit
-		// }
 		// l += slen
 		// printArgs = append(printArgs, s)
 	// }

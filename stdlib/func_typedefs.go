@@ -148,9 +148,6 @@ func FuncARS(fn func() string) tender.CallableFunc {
 			return nil, tender.ErrWrongNumArguments
 		}
 		s := fn()
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }
@@ -166,9 +163,6 @@ func FuncARSE(fn func() (string, error)) tender.CallableFunc {
 		if err != nil {
 			return wrapError(err), nil
 		}
-		if len(res) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: res}, nil
 	}
 }
@@ -183,9 +177,6 @@ func FuncARYE(fn func() ([]byte, error)) tender.CallableFunc {
 		res, err := fn()
 		if err != nil {
 			return wrapError(err), nil
-		}
-		if len(res) > tender.MaxBytesLen {
-			return nil, tender.ErrBytesLimit
 		}
 		return &tender.Bytes{Value: res}, nil
 	}
@@ -220,9 +211,6 @@ func FuncARSs(fn func() []string) tender.CallableFunc {
 		}
 		arr := &tender.Array{}
 		for _, elem := range fn() {
-			if len(elem) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: elem})
 		}
 		return arr, nil
@@ -241,9 +229,6 @@ func FuncASFRSs(fn func(string, float64) []string) tender.CallableFunc {
 		f, _ := tender.ToFloat64(args[1])
 		arr := &tender.Array{}
 		for _, elem := range fn(s, f) {
-			if len(elem) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: elem})
 		}
 		return arr, nil
@@ -1056,9 +1041,6 @@ func FuncASRS(fn func(string) string) tender.CallableFunc {
 			}
 		}
 		s := fn(s1)
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }
@@ -1103,9 +1085,6 @@ func FuncASRSs(fn func(string) []string) tender.CallableFunc {
 		res := fn(s1)
 		arr := &tender.Array{}
 		for _, elem := range res {
-			if len(elem) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: elem})
 		}
 		return arr, nil
@@ -1151,9 +1130,6 @@ func FuncASRSE(fn func(string) (string, error)) tender.CallableFunc {
 		res, err := fn(s1)
 		if err != nil {
 			return wrapError(err), nil
-		}
-		if len(res) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
 		}
 		return &tender.String{Value: res}, nil
 	}
@@ -1278,9 +1254,6 @@ func FuncASSRSs(fn func(string, string) []string) tender.CallableFunc {
 		}
 		arr := &tender.Array{}
 		for _, res := range fn(s1, s2) {
-			if len(res) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: res})
 		}
 		return arr, nil
@@ -1320,9 +1293,6 @@ func FuncASSIRSs(fn func(string, string, int) []string) tender.CallableFunc {
 		}
 		arr := &tender.Array{}
 		for _, res := range fn(s1, s2, i3) {
-			if len(res) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: res})
 		}
 		return arr, nil
@@ -1380,9 +1350,6 @@ func FuncASSRS(fn func(string, string) string) tender.CallableFunc {
 			}
 		}
 		s := fn(s1, s2)
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }
@@ -1466,9 +1433,6 @@ func FuncASsSRS(fn func([]string, string) string) tender.CallableFunc {
 			}
 		}
 		s := fn(ss1, s2)
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }
@@ -1615,9 +1579,6 @@ func FuncASIRS(fn func(string, int) string) tender.CallableFunc {
 			}
 		}
 		s := fn(s1, i2)
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }
@@ -1793,9 +1754,6 @@ func FuncASRYE(fn func(string) ([]byte, error)) tender.CallableFunc {
 		if err != nil {
 			return wrapError(err), nil
 		}
-		if len(res) > tender.MaxBytesLen {
-			return nil, tender.ErrBytesLimit
-		}
 		return &tender.Bytes{Value: res}, nil
 	}
 }
@@ -1821,9 +1779,6 @@ func FuncAIRSsE(fn func(int) ([]string, error)) tender.CallableFunc {
 		}
 		arr := &tender.Array{}
 		for _, r := range res {
-			if len(r) > tender.MaxStringLen {
-				return nil, tender.ErrStringLimit
-			}
 			arr.Value = append(arr.Value, &tender.String{Value: r})
 		}
 		return arr, nil
@@ -1846,9 +1801,6 @@ func FuncAIRS(fn func(int) string) tender.CallableFunc {
 			}
 		}
 		s := fn(i1)
-		if len(s) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		return &tender.String{Value: s}, nil
 	}
 }

@@ -1030,13 +1030,7 @@ func timesTimeFormat(args ...tender.Object) (ret tender.Object, err error) {
 		return
 	}
 
-	s := t1.Format(s2)
-	if len(s) > tender.MaxStringLen {
-
-		return nil, tender.ErrStringLimit
-	}
-
-	ret = &tender.String{Value: s}
+	ret = &tender.String{Value: t1.Format(s2)}
 
 	return
 }

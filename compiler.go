@@ -230,9 +230,6 @@ func (c *Compiler) Compile(node parser.Node) error {
 			c.emit(node, parser.OpFalse)
 		}
 	case *parser.StringLit:
-		if len(node.Value) > MaxStringLen {
-			return c.error(node, ErrStringLimit)
-		}
 		c.emit(node, parser.OpConstant,
 			c.addConstant(&String{Value: node.Value}))
 	case *parser.TemplateLit:
@@ -481,9 +478,6 @@ func (c *Compiler) Compile(node parser.Node) error {
 	case *parser.MapLit:
 		for _, elt := range node.Elements {
 			// key
-			if len(elt.Key) > MaxStringLen {
-				return c.error(node, ErrStringLimit)
-			}
 			c.emit(node, parser.OpConstant,
 				c.addConstant(&String{Value: elt.Key}))
 
@@ -869,22 +863,18 @@ func (c *Compiler) SetImportDir(dir string) {
 func (c *Compiler) compileTemplateLit(node *parser.TemplateLit) error {
     parts := node.Parts
     if len(parts) == 0 {
-        // empty string
         c.emit(node, parser.OpConstant, c.addConstant(&String{Value: ""}))
         return nil
     }
 
-    // Compile first part
-    if err := c.Compile(parts[0]); err != nil {
-        return err
-    }
+    // Start with an empty string
+    c.emit(node, parser.OpConstant, c.addConstant(&String{Value: ""}))
 
-    // For each subsequent part, compile and add
-    for i := 1; i < len(parts); i++ {
-        if err := c.Compile(parts[i]); err != nil {
+    // Concatenate every part (each part is converted to string because left operand is string)
+    for _, part := range parts {
+        if err := c.Compile(part); err != nil {
             return err
         }
-        // Add the two top stack items: left (accumulated) and right (new part)
         c.emit(node, parser.OpBinaryOp, int(token.Add))
     }
     return nil

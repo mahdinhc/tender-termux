@@ -308,18 +308,11 @@ func osReadFile(args ...tender.Object) (ret tender.Object, err error) {
 	}
 	fname, ok := tender.ToString(args[0])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 	}
 	bytes, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return wrapError(err), nil
-	}
-	if len(bytes) > tender.MaxBytesLen {
-		return nil, tender.ErrBytesLimit
 	}
 	return &tender.Bytes{Value: bytes}, nil
 }
@@ -526,16 +519,12 @@ func osOpenFile(args ...tender.Object) (tender.Object, error) {
 
 func osArgs(args ...tender.Object) (tender.Object, error) {
 	vm := args[0].(*tender.VMObj).Value
-	args = args[1:] // the first arg is VMObj inserted by VM
-	// fmt.Println(vm.CallCompiledFunc)
+	args = args[1:]
 	if len(args) != 0 {
 		return nil, tender.ErrWrongNumArguments
 	}
 	arr := &tender.Array{}
 	for _, osArg := range vm.Args {
-		if len(osArg) > tender.MaxStringLen {
-			return nil, tender.ErrStringLimit
-		}
 		arr.Value = append(arr.Value, &tender.String{Value: osArg})
 	}
 	return arr, nil
@@ -578,18 +567,11 @@ func osLookupEnv(args ...tender.Object) (tender.Object, error) {
 	}
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 	}
 	res, ok := os.LookupEnv(s1)
 	if !ok {
 		return tender.FalseValue, nil
-	}
-	if len(res) > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
 	}
 	return &tender.String{Value: res}, nil
 }
@@ -600,32 +582,9 @@ func osExpandEnv(args ...tender.Object) (tender.Object, error) {
 	}
 	s1, ok := tender.ToString(args[0])
 	if !ok {
-		return nil, tender.ErrInvalidArgumentType{
-			Name:     "first",
-			Expected: "string(compatible)",
-			Found:    args[0].TypeName(),
-		}
+		return nil, tender.ErrInvalidArgumentType{Name: "first", Expected: "string(compatible)", Found: args[0].TypeName()}
 	}
-	var vlen int
-	var failed bool
-	s := os.Expand(s1, func(k string) string {
-		if failed {
-			return ""
-		}
-		v := os.Getenv(k)
-
-		// this does not count the other texts that are not being replaced
-		// but the code checks the final length at the end
-		vlen += len(v)
-		if vlen > tender.MaxStringLen {
-			failed = true
-			return ""
-		}
-		return v
-	})
-	if failed || len(s) > tender.MaxStringLen {
-		return nil, tender.ErrStringLimit
-	}
+	s := os.ExpandEnv(s1)
 	return &tender.String{Value: s}, nil
 }
 

@@ -1283,25 +1283,16 @@ func builtinBytes(args ...Object) (Object, error) {
 			}
 			concatenatedBytes = append(concatenatedBytes, b...)
 		}
-		if len(concatenatedBytes) > MaxBytesLen {
-			return nil, ErrBytesLimit
-		}
 		return &Bytes{Value: concatenatedBytes}, nil
 	}
 
 	// If the first argument is not an array and there are no additional arguments,
 	// handle the single argument case as before
 	if n, ok := args[0].(*Int); ok {
-		if n.Value > int64(MaxBytesLen) {
-			return nil, ErrBytesLimit
-		}
 		return &Bytes{Value: make([]byte, int(n.Value))}, nil
 	}
 	v, ok := ToByteSlice(args[0])
 	if ok {
-		if len(v) > MaxBytesLen {
-			return nil, ErrBytesLimit
-		}
 		return &Bytes{Value: v}, nil
 	}
 	return NullValue, nil
