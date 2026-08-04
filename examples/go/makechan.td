@@ -7,7 +7,7 @@ worker := go fn() {
     secret_answer := 42
     job_queue <- secret_answer
 }()
-payload := <- job_queue
+payload := <-job_queue
 println("Received payload: " + string(payload))
 worker.wait()
 

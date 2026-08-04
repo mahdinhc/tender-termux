@@ -59,7 +59,7 @@ win.on_mouse(fn(button, action, x, y) {
     printf("Mouse click: button=%v, action=%v at (%v, %v)\n", button, action, x, y)
 })
 
-win.on_mouse_move(fn(x, y) {
+win.on_mousemove(fn(x, y) {
     mouseX = x
     mouseY = y
 })
