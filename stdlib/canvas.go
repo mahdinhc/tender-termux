@@ -78,7 +78,7 @@ func ggNewContext(args ...tender.Object) (ret tender.Object, err error) {
 func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 	return &tender.ImmutableMap{
 		Value: map[string]tender.Object{
-			"drawimage": &tender.NativeFunction{
+			"draw_image": &tender.NativeFunction{
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 3 {
 						return nil, tender.ErrWrongNumArguments
@@ -94,7 +94,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 					return nil, nil
 				},
 			},	
-			"drawimage_anchored": &tender.NativeFunction{
+			"draw_image_anchored": &tender.NativeFunction{
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 5 {
 						return nil, tender.ErrWrongNumArguments
@@ -138,19 +138,19 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 					return nil, nil
 				},
 			},	
-			"roundrect": &tender.NativeFunction{
+			"round_rect": &tender.NativeFunction{
 				Value: FuncAFFFFFR(ctx.DrawRoundedRectangle),
 			},
 			"circle": &tender.NativeFunction{
 				Value: FuncAFFFR(ctx.DrawCircle),
 			},	
-			"arc": &tender.NativeFunction{
-				Value: FuncAFFFFFR(ctx.DrawArc),
-			},
 			"ellipse": &tender.NativeFunction{
 				Value: FuncAFFFFR(ctx.DrawEllipse),
 			},
-			"ellipsearc": &tender.NativeFunction{
+			"arc": &tender.NativeFunction{
+				Value: FuncAFFFFFR(ctx.DrawArc),
+			},
+			"elliptical_arc": &tender.NativeFunction{
 				Value: FuncAFFFFFFR(ctx.DrawEllipticalArc),
 			},
 			"set_pixel": &tender.NativeFunction{
@@ -172,7 +172,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"hex": &tender.NativeFunction{
 				Value: FuncASR(ctx.SetHexColor),
 			},
-			"linewidth": &tender.NativeFunction{
+			"line_width": &tender.NativeFunction{
 				Value: FuncAFR(ctx.SetLineWidth),
 			},	
 			"dashoffset": &tender.NativeFunction{
@@ -204,13 +204,13 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"cubic_to": &tender.NativeFunction{
 				Value: FuncAFFFFFFR(ctx.CubicTo),
 			},
-			"closepath": &tender.NativeFunction{
+			"close_path": &tender.NativeFunction{
 				Value: FuncAR(ctx.ClosePath),
 			},	
-			"clearpath": &tender.NativeFunction{
+			"clear_path": &tender.NativeFunction{
 				Value: FuncAR(ctx.ClearPath),
 			},	
-			"newsubpath": &tender.NativeFunction{
+			"new_subpath": &tender.NativeFunction{
 				Value: FuncAR(ctx.NewSubPath),
 			},	
 			"clear": &tender.NativeFunction{
@@ -246,7 +246,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"fontface": &tender.NativeFunction{
 				Value: FuncAYFRE(ctx.FontFace),
 			},	
-			"fontheight": &tender.NativeFunction{
+			"font_height": &tender.NativeFunction{
 				Value: FuncARF(ctx.FontHeight),
 			},	
 			"set_font": &tender.NativeFunction{
@@ -268,13 +268,13 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"shear": &tender.NativeFunction{
 				Value: FuncAFFR(ctx.Shear),
 			},
-			"scaleabout": &tender.NativeFunction{
+			"scale_about": &tender.NativeFunction{
 				Value: FuncAFFFFR(ctx.ScaleAbout),
 			},	
-			"rotateabout": &tender.NativeFunction{
+			"rotate_about": &tender.NativeFunction{
 				Value: FuncAFFFR(ctx.RotateAbout),
 			},
-			"shearabout": &tender.NativeFunction{
+			"shear_about": &tender.NativeFunction{
 				Value: FuncAFFFFR(ctx.ShearAbout),
 			},	
 			"transform_point": &tender.NativeFunction{
@@ -298,7 +298,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"clip_preserve": &tender.NativeFunction{
 				Value: FuncAR(ctx.ClipPreserve),
 			},	
-			"resetclip": &tender.NativeFunction{
+			"reset_clip": &tender.NativeFunction{
 				Value: FuncAR(ctx.ResetClip),
 			},
 			"height": &tender.NativeFunction{
@@ -310,7 +310,7 @@ func makeGGContext(ctx *gg.Context) *tender.ImmutableMap {
 			"wordwrap": &tender.NativeFunction{
 				Value: FuncASFRSs(ctx.WordWrap),
 			},
-			"image": &tender.NativeFunction{
+			"get_image": &tender.NativeFunction{
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 0 {
 						return nil, tender.ErrWrongNumArguments

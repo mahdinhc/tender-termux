@@ -384,7 +384,7 @@ var graphicsModule = map[string]tender.Object{
 
 			// Query functions for key/mouse state
 			isKeyDownFn := &tender.NativeFunction{
-				Name: "is_key_down",
+				Name: "is_keydown",
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 1 {
 						return nil, tender.ErrInvalidArgCount
@@ -399,11 +399,10 @@ var graphicsModule = map[string]tender.Object{
 					return tender.FalseValue, nil
 				},
 			}
-			ctxMap["is_key_down"] = isKeyDownFn
-			ctxMap["is_key_pressed"] = isKeyDownFn
+			ctxMap["is_keydown"] = isKeyDownFn
 
-			ctxMap["is_mouse_down"] = &tender.NativeFunction{
-				Name: "is_mouse_down",
+			ctxMap["is_mousedown"] = &tender.NativeFunction{
+				Name: "is_mousedown",
 				Value: func(args ...tender.Object) (tender.Object, error) {
 					if len(args) != 1 {
 						return nil, tender.ErrInvalidArgCount
@@ -1016,8 +1015,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"roundrect": &tender.NativeFunction{
-			Name: "roundrect",
+		"round_rect": &tender.NativeFunction{
+			Name: "round_rect",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) != 6 {
 					return nil, tender.ErrInvalidArgCount
@@ -1220,8 +1219,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"set_line_width": &tender.NativeFunction{
-			Name: "set_line_width",
+		"line_width": &tender.NativeFunction{
+			Name: "line_width",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) != 1 {
 					return nil, tender.ErrInvalidArgCount
@@ -1446,28 +1445,6 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		// "load_font_face": &tender.NativeFunction{
-			// Name: "load_font_face",
-			// Value: func(args ...tender.Object) (tender.Object, error) {
-				// if len(args) != 2 {
-					// return nil, tender.ErrInvalidArgCount
-				// }
-				// data, err := ToFileData(args[0])
-				// if err != nil {
-					// return nil, err
-				// }
-				// size := toFloat32(args[1])
-				// f, err := truetype.Parse(data)
-				// if err != nil {
-					// return wrapError(err), nil
-				// }
-				// face := truetype.NewFace(f, &truetype.Options{Size: float64(size)})
-				// state.Font = f
-				// state.FontFace = face
-				// state.FontSize = float64(size)
-				// return tender.NullValue, nil
-			// },
-		// },
 		"set_font_size": &tender.NativeFunction{
 			Name: "set_font_size",
 			Value: func(args ...tender.Object) (tender.Object, error) {
@@ -1520,8 +1497,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return &tender.ImmutableMap{Value: resMap}, nil
 			},
 		},
-		"draw_string": &tender.NativeFunction{
-			Name: "draw_string",
+		"text": &tender.NativeFunction{
+			Name: "text",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) != 3 {
 					return nil, tender.ErrInvalidArgCount
@@ -1568,8 +1545,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"draw_string_anchored": &tender.NativeFunction{
-			Name: "draw_string_anchored",
+		"text_anchored": &tender.NativeFunction{
+			Name: "text_anchored",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) != 5 {
 					return nil, tender.ErrInvalidArgCount
@@ -1627,8 +1604,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"draw_string_wrapped": &tender.NativeFunction{
-			Name: "draw_string_wrapped",
+		"text_wrapped": &tender.NativeFunction{
+			Name: "text_wrapped",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) < 4 {
 					return nil, tender.ErrInvalidArgCount
@@ -1773,8 +1750,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"image": &tender.NativeFunction{
-			Name: "image",
+		"get_image": &tender.NativeFunction{
+			Name: "get_image",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				img := captureGLImage(state.Width, state.Height)
 				return makeImage(img), nil
