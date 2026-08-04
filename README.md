@@ -58,7 +58,7 @@ Modern scripting often means installing dozens of packages before drawing a wind
 - [xml](docs/pages/stdlib-xml.md): XML handling functions
 - [base64](docs/pages/stdlib-base64.md): Base64 encoding and decoding
 - [hex](docs/pages/stdlib-hex.md): Hexadecimal encoding and decoding
-- [colors](docs/pages/stdlib-colors.md): Functions to print colored text to the terminal
+- [console](docs/pages/stdlib-console.md): Functions to print colored text to the terminal
 - [gzip](docs/pages/stdlib-gzip.md): Gzip compression and decompression
 - [zip](docs/pages/stdlib-zip.md): ZIP archive manipulation
 - [tar](docs/pages/stdlib-tar.md): TAR archive creation and reading

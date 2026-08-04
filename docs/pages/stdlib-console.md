@@ -1,34 +1,34 @@
-## Stdlib `colors`
+## Stdlib `console`
 
-The `colors` module provides functionality for printing colored and styled text to the terminal. It includes utilities for writing to standard output and error, as well as applying rich text styles.
+The `console` module provides functionality for printing colored and styled text to the terminal. It includes utilities for writing to standard output and error, as well as applying rich text styles.
 
 ## Functions
 
-### `colors.stdout() → IOWriter`
+### `console.stdout() → IOWriter`
 
 Returns an `IOWriter` that writes to **standard output** (`stdout`) with color support.
 
 ```go
-import "colors"
+import "console"
 
-stdout := colors.stdout()
+stdout := console.stdout()
 ```
 
 ---
 
-### `colors.stderr() → IOWriter`
+### `console.stderr() → IOWriter`
 
 Returns an `IOWriter` that writes to **standard error** (`stderr`) with color support.
 
 ```go
-import "colors"
+import "console"
 
-stderr := colors.stderr()
+stderr := console.stderr()
 ```
 
 ---
 
-### `colors.style(text: string, ...props: map) → string`
+### `console.style(text: string, ...props: map) → string`
 
 Applies styles to a string and returns a formatted string.
 
@@ -55,18 +55,18 @@ Applies styles to a string and returns a formatted string.
 
 ```go
 import "fmt"
-import "colors"
+import "console"
 
-fmt.fprint(colors.stdout(), "Hello".red, "World".green, "\n")
-fmt.fprintln(colors.stderr(), "Hello".red, "World".green)
+fmt.fprint(console.stdout(), "Hello".red, "World".green, "\n")
+fmt.fprintln(console.stderr(), "Hello".red, "World".green)
 
-fmt.fprint(colors.stdout(), colors.style("Hello", {
+fmt.fprint(console.stdout(), console.style("Hello", {
     "color": "#ff0000",
     "bold": true,
     "underline": true
 }), "\n")
 
-fmt.fprintln(colors.stderr(), colors.style("Error!", {
+fmt.fprintln(console.stderr(), console.style("Error!", {
     "color": "#00ff00",
     "background": "#232323",
     "bold": true
