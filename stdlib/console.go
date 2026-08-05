@@ -9,8 +9,31 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 )
 
+var colorsModule = &tender.ImmutableMap{
+	Value: map[string]tender.Object{
+		"stdout": &tender.NativeFunction{
+			Value: func(args ...tender.Object) (tender.Object, error) {
+				if len(args) != 0 {
+					return nil, tender.ErrWrongNumArguments
+				}
+				return &IOWriter{Value: colorable.NewColorableStdout()}, nil
+			},
+		},
+		"stderr": &tender.NativeFunction{
+			Value: func(args ...tender.Object) (tender.Object, error) {
+				if len(args) != 0 {
+					return nil, tender.ErrWrongNumArguments
+				}
+				return &IOWriter{Value: colorable.NewColorableStderr()}, nil
+			},
+		},
+	},
+}
+
 var consoleModule = map[string]tender.Object{
-	"is_terminal": &tender.NativeFunction{
+	"colors": colorsModule,
+	"tcell": tcellModule,
+	"is_stdout_tty": &tender.NativeFunction{
 		Value: func(args ...tender.Object) (tender.Object, error) {
 			if len(args) != 0 {
 				return nil, tender.ErrWrongNumArguments
@@ -28,22 +51,6 @@ var consoleModule = map[string]tender.Object{
 			}
 		},
 	},	
-	"stdout": &tender.NativeFunction{
-		Value: func(args ...tender.Object) (tender.Object, error) {
-			if len(args) != 0 {
-				return nil, tender.ErrWrongNumArguments
-			}
-			return &IOWriter{Value: colorable.NewColorableStdout()}, nil
-		},
-	},
-	"stderr": &tender.NativeFunction{
-		Value: func(args ...tender.Object) (tender.Object, error) {
-			if len(args) != 0 {
-				return nil, tender.ErrWrongNumArguments
-			}
-			return &IOWriter{Value: colorable.NewColorableStderr()}, nil
-		},
-	},
 	"style": &tender.NativeFunction{
 		Value: func(args ...tender.Object) (tender.Object, error) {
 			if len(args) < 1 {
