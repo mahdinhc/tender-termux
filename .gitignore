@@ -9,3 +9,5 @@ tender.exe
 *.dll
 *.png
 *.jpg
+playground/tender.wasm
+playground/*.wasm
