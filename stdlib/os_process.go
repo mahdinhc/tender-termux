@@ -1,5 +1,3 @@
-//go:build !wasm && !js
-
 package stdlib
 
 import (
