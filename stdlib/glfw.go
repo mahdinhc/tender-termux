@@ -7,7 +7,7 @@ import (
 	"unsafe"
 
 	"github.com/2dprototype/tender"
-	"github.com/2dprototype/tender/v/glfw"
+	"github.com/2dprototype/go-gl/glfw"
 )
 
 // glfwModule exposes essential GLFW functionality to Tender scripts

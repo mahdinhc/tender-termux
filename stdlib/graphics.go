@@ -18,8 +18,8 @@ import (
 	"unsafe"
 
 	"github.com/2dprototype/tender"
-	"github.com/2dprototype/tender/v/gl"
-	"github.com/2dprototype/tender/v/glut"
+	"github.com/2dprototype/go-gl/gl"
+	"github.com/2dprototype/go-gl/glut"
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"

@@ -5,7 +5,7 @@ package stdlib
 import (
 	"fmt"
 	"github.com/2dprototype/tender"
-	"github.com/2dprototype/tender/v/glut"
+	"github.com/2dprototype/go-gl/glut"
 )
 
 // Module exposes the GLUT lifecycle to Tender scripts

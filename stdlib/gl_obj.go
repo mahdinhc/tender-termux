@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/2dprototype/tender/v/gl"
+	"github.com/2dprototype/go-gl/gl"
 )
 
 type MaterialGroup struct {

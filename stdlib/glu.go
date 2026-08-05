@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/2dprototype/tender"
-	"github.com/2dprototype/tender/v/glu"
+	"github.com/2dprototype/go-gl/glu"
 )
 
 var gluModule = map[string]tender.Object{

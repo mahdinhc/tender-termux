@@ -1,15 +1,18 @@
 module github.com/2dprototype/tender
 
-go 1.24.0
+go 1.25.0
 
 require (
+	github.com/2dprototype/go-gl v0.0.0-20260805164248-06ae957848d8
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/ebitengine/oto/v3 v3.1.1
+	github.com/gdamore/tcell/v2 v2.13.10
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/gonutz/wui/v2 v2.8.2
 	github.com/gorilla/websocket v1.5.1
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/oakmound/shiny v0.4.2
+	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9
 	golang.org/x/crypto v0.22.0
 	golang.org/x/image v0.15.0
 	golang.org/x/mobile v0.0.0-20240401224555-755f4ef71bbd
@@ -26,7 +29,6 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/ebitengine/purego v0.6.1 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
-	github.com/gdamore/tcell/v2 v2.13.10 // indirect
 	github.com/gonutz/w32/v2 v2.12.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -35,7 +37,6 @@ require (
 	github.com/oakmound/w32 v2.0.0+incompatible // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/yeka/zip v0.0.0-20231116150916-03d6312748a9 // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
 	golang.org/x/text v0.31.0 // indirect

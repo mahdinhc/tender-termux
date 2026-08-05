@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/2dprototype/tender"
-	"github.com/2dprototype/tender/v/gl"
+	"github.com/2dprototype/go-gl/gl"
 )
 
 // Module exposes the OpenGL API to Tender scripts
