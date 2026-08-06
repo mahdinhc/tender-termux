@@ -9,6 +9,7 @@ var BuiltinModules = map[string]map[string]tender.Object{
 	"math":         mathModule,
 	"mathf":        mathfModule,
 	"cmplx":        cmplxModule,
+	"big":          bigModule,
 	"strings":      stringsModule,
 	"times":        timesModule,
 	"rand":         randModule,

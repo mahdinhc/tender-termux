@@ -103,13 +103,6 @@ func getInt(obj tender.Object) (int64, bool) {
 	}
 }
 
-func checkArgCount(args []tender.Object, expected int) error {
-	if len(args) != expected {
-		return tender.ErrWrongNumArguments
-	}
-	return nil
-}
-
 // --- Core Utilities ---
 
 func mathfAbs(args ...tender.Object) (tender.Object, error) {
