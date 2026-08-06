@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
 	"image/png"
 	"math"
 	"os"
@@ -102,7 +101,9 @@ var graphicsModule = map[string]tender.Object{
 			gl.Ortho(0, float64(w), float64(h), 0, -1, 1)
 			gl.MatrixMode(gl.MODELVIEW)
 			gl.LoadIdentity()
-
+			gl.Enable(gl.BLEND)
+			gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+			
 			ctxMap := createDrawingMethods(state)
 
 			ctxMap["width"] = &tender.Int{Value: int64(state.Width)}
@@ -150,6 +151,8 @@ var graphicsModule = map[string]tender.Object{
 				gl.Ortho(0, float64(state.Width), float64(state.Height), 0, -1, 1)
 				gl.MatrixMode(gl.MODELVIEW)
 				gl.LoadIdentity()
+				gl.Enable(gl.BLEND)
+				gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 			}
 
 			setupViewport()
@@ -158,7 +161,6 @@ var graphicsModule = map[string]tender.Object{
 			var (
 				onDrawCB       tender.Object = tender.NullValue
 				onUpdateCB     tender.Object = tender.NullValue
-				onKeyCB        tender.Object = tender.NullValue
 				onKeyDownCB    tender.Object = tender.NullValue
 				onKeyUpCB      tender.Object = tender.NullValue
 				onKeyHoldCB    tender.Object = tender.NullValue
@@ -213,7 +215,7 @@ var graphicsModule = map[string]tender.Object{
 					for k, pressed := range keyStateMap {
 						if pressed {
 							if _, err := tender.WrapFuncCall(vm, onKeyHoldCB, &tender.String{Value: k}); err != nil {
-								fmt.Println("on_key_hold callback error:", err)
+								fmt.Println("on_keyhold callback error:", err)
 							}
 						}
 					}
@@ -230,15 +232,6 @@ var graphicsModule = map[string]tender.Object{
 						&tender.Int{Value: int64(y)},
 					); err != nil {
 						fmt.Println("on_keydown callback error:", err)
-					}
-				}
-				if onKeyCB != tender.NullValue {
-					if _, err := tender.WrapFuncCall(vm, onKeyCB,
-						&tender.String{Value: keyName},
-						&tender.Int{Value: int64(x)},
-						&tender.Int{Value: int64(y)},
-					); err != nil {
-						fmt.Println("on_key callback error:", err)
 					}
 				}
 			}
@@ -360,7 +353,6 @@ var graphicsModule = map[string]tender.Object{
 			// Add window specific event functions
 			ctxMap["on_draw"] = createCallbackSetter("on_draw", &onDrawCB)
 			ctxMap["on_update"] = createCallbackSetter("on_update", &onUpdateCB)
-			ctxMap["on_key"] = createCallbackSetter("on_key", &onKeyCB)
 			ctxMap["on_keydown"] = createCallbackSetter("on_keydown", &onKeyDownCB)
 			ctxMap["on_keyup"] = createCallbackSetter("on_keyup", &onKeyUpCB)
 
@@ -830,6 +822,32 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				state.G = toFloat32(args[1])
 				state.B = toFloat32(args[2])
 				state.A = toFloat32(args[3])
+				return tender.NullValue, nil
+			},
+		},
+		"rgb255": &tender.NativeFunction{
+			Name: "rgb255",
+			Value: func(args ...tender.Object) (tender.Object, error) {
+				if len(args) != 3 {
+					return nil, tender.ErrInvalidArgCount
+				}
+				state.R = toFloat32(args[0]) / 255.0
+				state.G = toFloat32(args[1]) / 255.0
+				state.B = toFloat32(args[2]) / 255.0
+				state.A = 1.0
+				return tender.NullValue, nil
+			},
+		},
+		"rgba255": &tender.NativeFunction{
+			Name: "rgba255",
+			Value: func(args ...tender.Object) (tender.Object, error) {
+				if len(args) != 4 {
+					return nil, tender.ErrInvalidArgCount
+				}
+				state.R = toFloat32(args[0]) / 255.0
+				state.G = toFloat32(args[1]) / 255.0
+				state.B = toFloat32(args[2]) / 255.0
+				state.A = toFloat32(args[3]) / 255.0
 				return tender.NullValue, nil
 			},
 		},
@@ -1433,15 +1451,15 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				if err != nil {
 					return nil, err
 				}
-				size := toFloat32(args[1])
+				size, _ := tender.ToFloat64(args[1])
 				f, err := truetype.Parse(data)
 				if err != nil {
 					return wrapError(err), nil
 				}
-				face := truetype.NewFace(f, &truetype.Options{Size: float64(size)})
+				face := truetype.NewFace(f, &truetype.Options{Size: size})
 				state.Font = f
 				state.FontFace = face
-				state.FontSize = float64(size)
+				state.FontSize = size
 				return tender.NullValue, nil
 			},
 		},
@@ -1451,12 +1469,12 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				if len(args) != 1 {
 					return nil, tender.ErrInvalidArgCount
 				}
-				size := toFloat32(args[0])
-				state.FontSize = float64(size)
+				size, _ := tender.ToFloat64(args[0])
+				state.FontSize = size
 
 				if state.Font != nil {
 					face := truetype.NewFace(state.Font, &truetype.Options{
-						Size: float64(size),
+						Size: size,
 					})
 					state.FontFace = face
 				}
@@ -1675,38 +1693,8 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				return tender.NullValue, nil
 			},
 		},
-		"encode": &tender.NativeFunction{
-			Name: "encode",
-			Value: func(args ...tender.Object) (tender.Object, error) {
-				format := "png"
-				if len(args) >= 1 {
-					if strObj, ok := args[0].(*tender.String); ok {
-						format = strObj.Value
-					}
-				}
-
-				img := captureGLImage(state.Width, state.Height)
-				buffer := new(bytes.Buffer)
-
-				if format == "png" {
-					err := png.Encode(buffer, img)
-					if err != nil {
-						return nil, err
-					}
-				} else if format == "jpeg" || format == "jpg" {
-					err := jpeg.Encode(buffer, img, nil)
-					if err != nil {
-						return nil, err
-					}
-				} else {
-					return nil, fmt.Errorf("unsupported encoding format: %s", format)
-				}
-
-				return &tender.Bytes{Value: buffer.Bytes()}, nil
-			},
-		},
-		"save": &tender.NativeFunction{
-			Name: "save",
+		"save_png": &tender.NativeFunction{
+			Name: "save_png",
 			Value: func(args ...tender.Object) (tender.Object, error) {
 				if len(args) < 1 {
 					return nil, tender.ErrInvalidArgCount
@@ -1715,34 +1703,16 @@ func createDrawingMethods(state *contextState) map[string]tender.Object {
 				if !ok {
 					return nil, tender.ErrInvalidArgument
 				}
-				path := pathObj.Value
-
-				format := "png"
-				if len(args) >= 2 {
-					if formatObj, ok := args[1].(*tender.String); ok {
-						format = formatObj.Value
-					}
-				} else {
-					if strings.HasSuffix(strings.ToLower(path), ".jpg") || strings.HasSuffix(strings.ToLower(path), ".jpeg") {
-						format = "jpeg"
-					}
-				}
-
+				
 				img := captureGLImage(state.Width, state.Height)
 
-				f, err := os.Create(path)
+				f, err := os.Create(pathObj.Value)
 				if err != nil {
 					return nil, err
 				}
 				defer f.Close()
 
-				if format == "png" {
-					err = png.Encode(f, img)
-				} else if format == "jpeg" || format == "jpg" {
-					err = jpeg.Encode(f, img, nil)
-				} else {
-					return nil, fmt.Errorf("unsupported save format: %s", format)
-				}
+				err = png.Encode(f, img)
 
 				if err != nil {
 					return nil, err

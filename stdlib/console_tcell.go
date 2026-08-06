@@ -16,34 +16,19 @@ var tcellModule = &tender.ImmutableMap{
 
 				methods := map[string]tender.Object{
 					"init": &tender.NativeFunction{
-						Value: func(args ...tender.Object) (tender.Object, error) {
-							if err := s.Init(); err != nil { return wrapError(err), nil }
-							return tender.NullValue, nil
-						},
+						Value: FuncARE(s.Init),
 					},
 					"fini": &tender.NativeFunction{
-						Value: func(args ...tender.Object) (tender.Object, error) {
-							s.Fini()
-							return tender.NullValue, nil
-						},
+						Value: FuncAR(s.Fini),
 					},
 					"clear": &tender.NativeFunction{
-						Value: func(args ...tender.Object) (tender.Object, error) {
-							s.Clear()
-							return tender.NullValue, nil
-						},
+						Value: FuncAR(s.Clear),
 					},
 					"show": &tender.NativeFunction{
-						Value: func(args ...tender.Object) (tender.Object, error) {
-							s.Show()
-							return tender.NullValue, nil
-						},
+						Value: FuncAR(s.Show),
 					},
 					"sync": &tender.NativeFunction{
-						Value: func(args ...tender.Object) (tender.Object, error) {
-							s.Sync()
-							return tender.NullValue, nil
-						},
+						Value: FuncAR(s.Sync),
 					},
 					"set_content": &tender.NativeFunction{
 						Value: func(args ...tender.Object) (tender.Object, error) {
