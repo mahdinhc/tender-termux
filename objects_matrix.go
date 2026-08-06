@@ -36,11 +36,11 @@ func (m *Matrix[T]) TypeName() string {
 	var zero T
 	switch any(zero).(type) {
 	case int64:
-		return "matrix:int"
+		return "matrix_int"
 	case float64:
-		return "matrix:float"
+		return "matrix_float"
 	case complex128:
-		return "matrix:complex"
+		return "matrix_complex"
 	default:
 		return "matrix"
 	}
@@ -1013,7 +1013,7 @@ type rowView[T MatrixElement] struct {
 	row    int
 }
 
-func (rv *rowView[T]) TypeName() string { return "row-view" }
+func (rv *rowView[T]) TypeName() string { return "row_view" }
 
 func (rv *rowView[T]) String() string {
 	rowData := make([]string, rv.matrix.Cols)

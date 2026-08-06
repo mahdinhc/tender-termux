@@ -348,7 +348,7 @@ type NativeFunction struct {
 
 // TypeName returns the name of the type.
 func (o *NativeFunction) TypeName() string {
-	return "native-function"
+	return "native_function"
 }
 
 func (o *NativeFunction) String() string {

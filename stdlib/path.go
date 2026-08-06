@@ -3,6 +3,7 @@ package stdlib
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"github.com/2dprototype/tender"
 )
 
@@ -12,12 +13,13 @@ var pathModule = map[string]tender.Object{
 	"ext":         &tender.NativeFunction{Name: "ext", Value: FuncASRS(filepath.Ext)},
 	"clean":       &tender.NativeFunction{Name: "clean", Value: FuncASRS(filepath.Clean)},
 	"dir":         &tender.NativeFunction{Name: "dir", Value: FuncASRS(filepath.Dir)},
-	"isabs":       &tender.NativeFunction{Name: "isabs", Value: FuncASRB(filepath.IsAbs)},
+	"is_abs":       &tender.NativeFunction{Name: "is_abs", Value: FuncASRB(filepath.IsAbs)},
 	// "islocal":       &tender.NativeFunction{Name: "islocal", Value: FuncASRB(filepath.IsLocal)},
 	"abs":         &tender.NativeFunction{Name: "abs", Value: FuncASRSE(filepath.Abs)},
 	"to_slash":    &tender.NativeFunction{Name: "to_slash", Value: FuncASRS(filepath.ToSlash)},
 	"from_slash":  &tender.NativeFunction{Name: "from_slash", Value: FuncASRS(filepath.FromSlash)},
 	"vol":         &tender.NativeFunction{Name: "vol", Value: FuncASRS(filepath.VolumeName)},
+	"name":        &tender.NativeFunction{Name: "name", Value: pathName},
 	
 	"walklist":   &tender.NativeFunction{Name: "walklist", Value: pathWalkList},
 	"splitlist":  &tender.NativeFunction{Name: "splitlist", Value: FuncASRSs(filepath.SplitList)},
@@ -75,6 +77,22 @@ func pathJoin(args ...tender.Object) (ret tender.Object, err error) {
 	return &tender.String{Value: joined}, nil
 }
 
+// pathName returns the file name without its extension
+// Example: "hello.txt" -> "hello", "/path/to/file.tar.gz" -> "file.tar"
+func pathName(args ...tender.Object) (tender.Object, error) {
+	if len(args) != 1 {
+		return nil, tender.ErrWrongNumArguments
+	}
+	path, ok := tender.ToString(args[0])
+	if !ok {
+		return nil, tender.ErrInvalidArgumentType{
+			Name: "path", 
+			Expected: "string",
+		}
+	}
+	base := filepath.Base(path)
+	return &tender.String{Value: strings.TrimSuffix(base, filepath.Ext(base))}, nil
+}
 
 func pathWalkList(args ...tender.Object) (ret tender.Object, err error) {
 	if len(args) != 1 {

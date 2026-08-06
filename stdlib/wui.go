@@ -192,7 +192,7 @@ type WUIWindow struct {
 	Value *wui.Window
 }
 
-func (w *WUIWindow) TypeName() string { return "window" }
+func (w *WUIWindow) TypeName() string { return "wui_window" }
 func (w *WUIWindow) String() string   { return "<window>" }
 func (w *WUIWindow) Copy() tender.Object {
 	return &WUIWindow{Value: w.Value}
@@ -204,7 +204,7 @@ type WUIFileOpenDialog struct {
 	Value *wui.FileOpenDialog
 }
 
-func (f *WUIFileOpenDialog) TypeName() string { return "fileopendialog" }
+func (f *WUIFileOpenDialog) TypeName() string { return "wui_fileopendialog" }
 func (f *WUIFileOpenDialog) String() string   { return "<fileopendialog>" }
 func (f *WUIFileOpenDialog) Copy() tender.Object {
 	return &WUIFileOpenDialog{Value: f.Value}
@@ -326,7 +326,7 @@ type WUIFileSaveDialog struct {
 	Value *wui.FileSaveDialog
 }
 
-func (f *WUIFileSaveDialog) TypeName() string { return "filesavedialog" }
+func (f *WUIFileSaveDialog) TypeName() string { return "wui_filesavedialog" }
 func (f *WUIFileSaveDialog) String() string   { return "<filesavedialog>" }
 func (f *WUIFileSaveDialog) Copy() tender.Object {
 	return &WUIFileSaveDialog{Value: f.Value}
@@ -425,7 +425,7 @@ type WUIFolderSelectDialog struct {
 	Value *wui.FolderSelectDialog
 }
 
-func (f *WUIFolderSelectDialog) TypeName() string { return "folderselectdialog" }
+func (f *WUIFolderSelectDialog) TypeName() string { return "wui_folderselectdialog" }
 func (f *WUIFolderSelectDialog) String() string   { return "<folderselectdialog>" }
 func (f *WUIFolderSelectDialog) Copy() tender.Object {
 	return &WUIFolderSelectDialog{Value: f.Value}
@@ -474,7 +474,7 @@ type WUIFont struct {
 	Value *wui.Font
 }
 
-func (f *WUIFont) TypeName() string { return "font" }
+func (f *WUIFont) TypeName() string { return "wui_font" }
 func (f *WUIFont) String() string   { return "<font>" }
 func (f *WUIFont) Copy() tender.Object {
 	return &WUIFont{Value: f.Value}
@@ -485,7 +485,7 @@ type WUICursor struct {
 	Value *wui.Cursor
 }
 
-func (c *WUICursor) TypeName() string { return "cursor" }
+func (c *WUICursor) TypeName() string { return "wui_cursor" }
 func (c *WUICursor) String() string   { return "<cursor>" }
 func (c *WUICursor) Copy() tender.Object {
 	return &WUICursor{Value: c.Value}
@@ -496,7 +496,7 @@ type WUIIcon struct {
 	Value *wui.Icon
 }
 
-func (i *WUIIcon) TypeName() string { return "icon" }
+func (i *WUIIcon) TypeName() string { return "wui_icon" }
 func (i *WUIIcon) String() string   { return "<icon>" }
 func (i *WUIIcon) Copy() tender.Object {
 	return &WUIIcon{Value: i.Value}
@@ -507,7 +507,7 @@ type WUIMenu struct {
 	Value *wui.Menu
 }
 
-func (m *WUIMenu) TypeName() string { return "menu" }
+func (m *WUIMenu) TypeName() string { return "wui_menu" }
 func (m *WUIMenu) String() string   { return "<menu>" }
 func (m *WUIMenu) Copy() tender.Object {
 	return &WUIMenu{Value: m.Value}
@@ -518,7 +518,7 @@ type WUIMenuString struct {
 	Value *wui.MenuString
 }
 
-func (m *WUIMenuString) TypeName() string { return "menustring" }
+func (m *WUIMenuString) TypeName() string { return "wui_menustring" }
 func (m *WUIMenuString) String() string   { return "<menustring>" }
 func (m *WUIMenuString) Copy() tender.Object {
 	return &WUIMenuString{Value: m.Value}
@@ -529,7 +529,7 @@ type WUIMenuItem struct {
 	Value wui.MenuItem
 }
 
-func (m *WUIMenuItem) TypeName() string { return "menuitem" }
+func (m *WUIMenuItem) TypeName() string { return "wui_menuitem" }
 func (m *WUIMenuItem) String() string   { return "<menuitem>" }
 func (m *WUIMenuItem) Copy() tender.Object {
 	return &WUIMenuItem{Value: m.Value}
@@ -2017,7 +2017,7 @@ type WUIColor struct {
 	Value wui.Color
 }
 
-func (c *WUIColor) TypeName() string { return "color" }
+func (c *WUIColor) TypeName() string { return "wui_color" }
 func (c *WUIColor) String() string   { return fmt.Sprintf("<color r:%d g:%d b:%d>", c.Value.R(), c.Value.G(), c.Value.B()) }
 func (c *WUIColor) Copy() tender.Object {
 	return &WUIColor{Value: c.Value}

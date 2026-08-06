@@ -78,7 +78,7 @@ var tcellModule = &tender.ImmutableMap{
 							case *tcell.EventKey:
 								return &tender.Map{
 									Value: map[string]tender.Object{
-										"type": &tender.String{Value: "key"},
+										"kind": &tender.String{Value: "key"},
 										"key":  &tender.Int{Value: int64(ev.Key())},
 										"rune": &tender.Char{Value: ev.Rune()},
 										"name": &tender.String{Value: ev.Name()},
@@ -88,7 +88,7 @@ var tcellModule = &tender.ImmutableMap{
 								w, h := ev.Size()
 								return &tender.Map{
 									Value: map[string]tender.Object{
-										"type":   &tender.String{Value: "resize"},
+										"kind":   &tender.String{Value: "resize"},
 										"width":  &tender.Int{Value: int64(w)},
 										"height": &tender.Int{Value: int64(h)},
 									},
@@ -137,7 +137,7 @@ func buildTCellStyle(m *tender.Map) tcell.Style {
 			if b, _ := tender.ToBool(v); b {
 				st = st.Italic(true)
 			}
-		case "strikethrough":
+		case "strike":
 			if b, _ := tender.ToBool(v); b {
 				st = st.StrikeThrough(true)
 			}

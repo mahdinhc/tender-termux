@@ -73,7 +73,7 @@ type BytesIterator struct {
 
 // TypeName returns the name of the type.
 func (i *BytesIterator) TypeName() string {
-	return "bytes-iterator"
+	return "bytes_iterator"
 }
 
 func (i *BytesIterator) String() string {
@@ -118,7 +118,7 @@ type MapIterator struct {
 
 // TypeName returns the name of the type.
 func (i *MapIterator) TypeName() string {
-	return "map-iterator"
+	return "map_iterator"
 }
 
 func (i *MapIterator) String() string {
@@ -169,7 +169,7 @@ type StringIterator struct {
 
 // TypeName returns the name of the type.
 func (i *StringIterator) TypeName() string {
-	return "string-iterator"
+	return "string_iterator"
 }
 
 func (i *StringIterator) String() string {

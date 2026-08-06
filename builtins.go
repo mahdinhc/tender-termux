@@ -31,7 +31,6 @@ func init() {
 	addBuiltinFunction("delete", builtinDelete, false)
 	addBuiltinFunction("splice", builtinSplice, false)
 	addBuiltinFunction("sort", builtinSort, false)
-	addBuiltinFunction("rune", builtinRune, false)
 	addBuiltinFunction("string", builtinString, false)
 	addBuiltinFunction("int", builtinInt, false)
 	addBuiltinFunction("bigint", builtinBigint, false)
@@ -403,29 +402,6 @@ func builtinSort(args ...Object) (Object, error) {
     }
 }
 
-func builtinRune(args ...Object) (Object, error) {
-    if len(args) != 1 {
-        return nil, ErrWrongNumArguments
-    }
-
-	switch arg := args[0].(type) {
-		case *Char:
-			return &Int{Value: int64(arg.Value)}, nil
-		case *String:
-			if len(arg.Value) == 1 {
-				return &Int{Value: int64(arg.Value[0])}, nil
-			} else {
-				return &Int{Value: int64([]rune(arg.Value)[0])}, nil
-			}
-    }
-
-    return nil, ErrInvalidArgumentType{
-        Name:     "first",
-        Expected: "char or string of length 1",
-        Found:    args[0].TypeName(),
-    }
-}
-
 func builtinTypeOf(args ...Object) (Object, error) {
 	if len(args) != 1 {
 		return nil, ErrWrongNumArguments
@@ -675,89 +651,6 @@ func builtinIsCycle(args ...Object) (Object, error) {
 
     return FalseValue, nil
 }
-
-// func builtinIsCycle(args ...Object) (Object, error) {
-    // if len(args) != 1 {
-        // return nil, ErrWrongNumArguments
-    // }
-
-    // visitedMaps := make(map[*Map]bool)
-    // visitedArrays := make(map[*Array]bool)
-    // traversingMaps := make(map[*Map]bool)
-    // traversingArrays := make(map[*Array]bool)
-
-    // var dfsMap func(*Map, *Map) bool
-    // var dfsArray func(*Array, *Array) bool
-
-    // dfsMap = func(currMap, parentMap *Map) bool {
-        // if traversingMaps[currMap] {
-            // return true // Cycle detected in map
-        // }
-        // if visitedMaps[currMap] {
-            // return false // Already visited, no cycle
-        // }
-        // traversingMaps[currMap] = true
-        // defer delete(traversingMaps, currMap)
-
-        // visitedMaps[currMap] = true
-        // for _, value := range currMap.Value {
-            // if m, ok := value.(*Map); ok {
-                // if dfsMap(m, currMap) {
-                    // return true
-                // }
-            // } else if a, ok := value.(*Array); ok {
-                // if dfsArray(a, nil) {
-                    // return true
-                // }
-            // }
-        // }
-        // return false
-    // }
-
-    // dfsArray = func(currArray, parentArray *Array) bool {
-        // if traversingArrays[currArray] {
-            // return true // Cycle detected in array
-        // }
-        // if visitedArrays[currArray] {
-            // return false // Already visited, no cycle
-        // }
-        // traversingArrays[currArray] = true
-        // defer delete(traversingArrays, currArray)
-
-        // visitedArrays[currArray] = true
-        // for _, value := range currArray.Value {
-            // if m, ok := value.(*Map); ok {
-                // if dfsMap(m, nil) {
-                    // return true
-                // }
-            // } else if a, ok := value.(*Array); ok {
-                // if dfsArray(a, currArray) {
-                    // return true
-                // }
-            // }
-        // }
-        // return false
-    // }
-
-    // switch obj := args[0].(type) {
-    // case *Map:
-        // if dfsMap(obj, nil) {
-            // return TrueValue, nil
-        // }
-    // case *Array:
-        // if dfsArray(obj, nil) {
-            // return TrueValue, nil
-        // }
-    // default:
-        // return nil, ErrInvalidArgumentType{
-            // Name:     "first",
-            // Expected: "map or array",
-            // Found:    args[0].TypeName(),
-        // }
-    // }
-
-    // return FalseValue, nil
-// }
 
 func builtinIsInt(args ...Object) (Object, error) {
 	if len(args) != 1 {

@@ -24,7 +24,7 @@ type IOWriter struct {
 
 // TypeName returns the name of the type.
 func (p *IOWriter) TypeName() string {
-    return "io.writer"
+    return "io_writer"
 }
 
 func (p *IOWriter) String() string {
@@ -54,7 +54,7 @@ type IOReader struct {
 }
 
 func (p *IOReader) TypeName() string {
-    return "io.reader"
+    return "io_reader"
 }
 
 func (p *IOReader) String() string {
