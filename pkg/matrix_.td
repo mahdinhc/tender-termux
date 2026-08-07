@@ -1,4 +1,8 @@
-make_array := fn(rows, cols, initial) {
+fn is_num(n) {
+	return is_int(n) || is_float(n) || is_bigint(n) || is_bigfloat(n) || is_complex(n)
+}
+
+fn make_array(rows, cols, initial) {
     arr := []
     for i := 0; i < rows; i++ {
         row := []
@@ -11,7 +15,7 @@ make_array := fn(rows, cols, initial) {
 }
 
 
-is_matrix := fn(arr) {
+fn is_matrix_(arr) {
 	if len(arr) < 1 {
 		return false
 	}
@@ -21,7 +25,7 @@ is_matrix := fn(arr) {
 			return false
 		}
 		for j in i {
-			if !(is_int(j) || is_float(j)) {
+			if !(is_num(j)) {
 				return false
 			}
 		}
@@ -30,7 +34,7 @@ is_matrix := fn(arr) {
 }
 
 
-det_recursive := fn(mat) {
+fn det_recursive(mat) {
 	if len(mat) == 1 {
 		return mat[0][0]
 	}
@@ -60,381 +64,380 @@ det_recursive := fn(mat) {
 
 
 
-matrix := fn(A) {
-    this := {
-		data: A,
-		order: fn() {
-			return [len(A), len(A[0])]
-		},
-		add: fn(B) {
-			if is_map(B) {
-				if is_matrix(B.data) {
-					B = B.data
-				}
+fn matrix_(A) {
+    this := {}
+	this.data = A
+	this.order = fn() {
+		return [len(A), len(A[0])]
+	}
+	this.add = fn(B) {
+		if is_map(B) {
+			if is_matrix_(B.data) {
+				B = B.data
 			}
-			if is_int(B) || is_float(B) {
-				oA := this.order()
-				result := make_array(oA[0], oA[1], 0)
-				for i := 0; i < len(A); i++ {
-					for j := 0; j < len(A[i]); j++ {
-						result[i][j] = A[i][j] + B
-					}
-				}
-				return matrix(result)
-			}
-			else if is_array(B) {
-				oB := matrix(B).order()
-				oA := this.order()
-				
-				if oA[0] == oB[0] && oA[1] == oB[1] {
-					result := make_array(oA[0], oB[1], 0)
-					for i := 0; i < len(A); i++ {
-						for j := 0; j < len(A[i]); j++ {
-							result[i][j] = A[i][j] + B[i][j]
-						}
-					}
-					return matrix(result)
-				} 
-				else {
-					return error("Invalid order for addition!")
-				}
-			} 
-			else {
-				return error("Unsupported type for addition!")
-			}
-		},
-		sub: fn(B) {
-			if is_map(B) {
-				if is_matrix(B.data) {
-					B = B.data
-				}
-			}			
-			if is_int(B) || is_float(B) {
-				oA := this.order()
-				result := make_array(oA[0], oA[1], 0)
-				for i := 0; i < len(A); i++ {
-					for j := 0; j < len(A[i]); j++ {
-						result[i][j] = A[i][j] - B
-					}
-				}
-				return matrix(result)
-			}
-			else if is_array(B) {
-				oB := matrix(B).order()
-				oA := this.order()
-				
-				if oA[0] == oB[0] && oA[1] == oB[1] {
-					result := make_array(oA[0], oB[1], 0)
-					for i := 0; i < len(A); i++ {
-						for j := 0; j < len(A[i]); j++ {
-							result[i][j] = A[i][j] - B[i][j]
-						}
-					}
-					return matrix(result)
-				}
-				else {
-					return error("Invalid order for subtraction!")
-				}
-			}
-			else {
-				return error("Unsupported type for subtraction!")
-			}
-		},
-		mul: fn(B) {
-			if is_map(B) {
-				if is_matrix(B.data) {
-					B = B.data
-				}
-			}
-			if is_int(B) || is_float(B) {
-				for i := 0; i < len(A); i++ {
-					for j := 0; j < len(A[i]); j++ {
-						A[i][j] *= B
-					}
-				}
-			} 
-			else if is_array(B) {
-				oB := matrix(B).order()
-				oA := this.order()
-				
-				if oA[1] == oB[0] {
-					result := make_array(oA[0], oB[1], 0)
-					
-					for i := 0; i < oA[0]; i++ {
-						for j := 0; j < oB[1]; j++ {
-							sum := 0
-							for k := 0; k < oA[1]; k++ {
-								sum += A[i][k] * B[k][j]
-							}
-							result[i][j] = sum
-						}
-					}
-					return matrix(result)
-				} 
-				else {
-					return error("Invalid dimensions for multiplication!")
-				}
-			} 
-			else {
-				return error("Unsupported type for multiplication!")
-			}
-		},
-		transpose: fn() {
-			result := make_array(len(A[0]), len(A), 0)
+		}
+		if is_num(B) {
+			oA := this.order()
+			result := make_array(oA[0], oA[1], 0)
 			for i := 0; i < len(A); i++ {
 				for j := 0; j < len(A[i]); j++ {
-					result[j][i] = A[i][j]
+					result[i][j] = A[i][j] + B
 				}
 			}
-			return matrix(result)
-		},
-		__print__: fn() {
-			for i := 0; i < len(A); i++ {
-				println(A[i])
-			}
-		},
-		scale: fn(scalar) {
-			// Scalar multiplication
-			if is_int(scalar) || is_float(scalar) {
-				result := make_array(len(A), len(A[0]), 0)
+			return matrix_(result)
+		}
+		else if is_array(B) {
+			oB := matrix_(B).order()
+			oA := this.order()
+			
+			if oA[0] == oB[0] && oA[1] == oB[1] {
+				result := make_array(oA[0], oB[1], 0)
 				for i := 0; i < len(A); i++ {
 					for j := 0; j < len(A[i]); j++ {
-						result[i][j] = A[i][j] * scalar
+						result[i][j] = A[i][j] + B[i][j]
 					}
 				}
-				return matrix(result)
+				return matrix_(result)
 			} 
 			else {
-				return error("Unsupported type for scaling!")
+				return error("Invalid order for addition!")
 			}
-		},
-		det: fn() {
-            oA := this.order()
-            if oA[0] == oA[1] {
-				return det_recursive(A)
+		} 
+		else {
+			return error("Unsupported type for addition!")
+		}
+	}
+	this.sub = fn(B) {
+		if is_map(B) {
+			if is_matrix_(B.data) {
+				B = B.data
+			}
+		}			
+		if is_num(B) {
+			oA := this.order()
+			result := make_array(oA[0], oA[1], 0)
+			for i := 0; i < len(A); i++ {
+				for j := 0; j < len(A[i]); j++ {
+					result[i][j] = A[i][j] - B
+				}
+			}
+			return matrix_(result)
+		}
+		else if is_array(B) {
+			oB := matrix_(B).order()
+			oA := this.order()
+			
+			if oA[0] == oB[0] && oA[1] == oB[1] {
+				result := make_array(oA[0], oB[1], 0)
+				for i := 0; i < len(A); i++ {
+					for j := 0; j < len(A[i]); j++ {
+						result[i][j] = A[i][j] - B[i][j]
+					}
+				}
+				return matrix_(result)
 			}
 			else {
-                return error("Determinant calculation requires a square matrix!")
+				return error("Invalid order for subtraction!")
 			}
-		},
-		is_singular: fn() {
-            // Check if the matrix is singular (non-invertible)
-            return this.determinant() == 0
-		},
-		is_square: fn() {
-            // Check if the matrix is square
-            oA := this.order()
-            return oA[0] == oA[1]
-		},
-		is_symmetric: fn() {
-            // Check if the matrix is symmetric
-            if this.is_square() {
-                for i := 0; i < len(A); i++ {
-                    for j := i + 1; j < len(A[i]); j++ {
-                        if A[i][j] != A[j][i] {
-                            return false
+		}
+		else {
+			return error("Unsupported type for subtraction!")
+		}
+	}
+	this.mul = fn(B) {
+		if is_map(B) {
+			if is_matrix_(B.data) {
+				B = B.data
+			}
+		}
+		if is_num(B) {
+			for i := 0; i < len(A); i++ {
+				for j := 0; j < len(A[i]); j++ {
+					A[i][j] *= B
+				}
+			}
+		} 
+		else if is_array(B) {
+			oB := matrix_(B).order()
+			oA := this.order()
+			
+			if oA[1] == oB[0] {
+				result := make_array(oA[0], oB[1], 0)
+				
+				for i := 0; i < oA[0]; i++ {
+					for j := 0; j < oB[1]; j++ {
+						sum := 0
+						for k := 0; k < oA[1]; k++ {
+							sum += A[i][k] * B[k][j]
 						}
+						result[i][j] = sum
 					}
 				}
-				return true
+				return matrix_(result)
 			} 
 			else {
-                return false
+				return error("Invalid dimensions for multiplication!")
 			}
-		},
-		is_diagonal: fn() {
-            // Check if the matrix is diagonal
-            if this.is_square() {
-                for i := 0; i < len(A); i++ {
-                    for j := 0; j < len(A[i]); j++ {
-						if i != j && A[i][j] != 0 {
+		} 
+		else {
+			return error("Unsupported type for multiplication!")
+		}
+	}
+	this.transpose = fn() {
+		result := make_array(len(A[0]), len(A), 0)
+		for i := 0; i < len(A); i++ {
+			for j := 0; j < len(A[i]); j++ {
+				result[j][i] = A[i][j]
+			}
+		}
+		return matrix_(result)
+	}
+	this.__print__ = fn() {
+		for i := 0; i < len(A); i++ {
+			println(A[i])
+		}
+	}
+	this.scale = fn(scalar) {
+		// Scalar multiplication
+		if is_num(scalar) {
+			result := make_array(len(A), len(A[0]), 0)
+			for i := 0; i < len(A); i++ {
+				for j := 0; j < len(A[i]); j++ {
+					result[i][j] = A[i][j] * scalar
+				}
+			}
+			return matrix_(result)
+		} 
+		else {
+			return error("Unsupported type for scaling!")
+		}
+	}
+	this.det = fn() {
+		oA := this.order()
+		if oA[0] == oA[1] {
+			return det_recursive(A)
+		}
+		else {
+			return error("Determinant calculation requires a square matrix_!")
+		}
+	}
+	this.is_singular = fn() {
+		// Check if the matrix_ is singular (non-invertible)
+		return this.det() == 0
+	}
+	this.is_square = fn() {
+		// Check if the matrix_ is square
+		oA := this.order()
+		return oA[0] == oA[1]
+	}
+	this.is_symmetric = fn() {
+		// Check if the matrix_ is symmetric
+		if this.is_square() {
+			for i := 0; i < len(A); i++ {
+				for j := i + 1; j < len(A[i]); j++ {
+					if A[i][j] != A[j][i] {
+						return false
+					}
+				}
+			}
+			return true
+		} 
+		else {
+			return false
+		}
+	}
+	this.is_diagonal = fn() {
+		// Check if the matrix_ is diagonal
+		if this.is_square() {
+			for i := 0; i < len(A); i++ {
+				for j := 0; j < len(A[i]); j++ {
+					if i != j && A[i][j] != 0 {
+						return false
+					}
+				}
+			}
+			return true
+		} 
+		else {
+			return false
+		}
+	}
+	this.trace = fn() {
+		// Calculate the trace of the matrix_
+		if this.is_square() {
+			tr := 0
+			for i := 0; i < len(A); i++ {
+				tr += A[i][i]
+			}
+			return tr
+		} 
+		else {
+			return error("Trace calculation requires a square matrix_!")
+		}
+	}
+	this.is_zero = fn() {
+		// Check if all elements in the matrix_ are zero
+		for i := 0; i < len(A); i++ {
+			for j := 0; j < len(A[i]); j++ {
+				if A[i][j] != 0 {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	this.is_identity = fn() {
+		// Check if the matrix_ is an identity matrix_
+		if this.is_square() {
+			for i := 0; i < len(A); i++ {
+				for j := 0; j < len(A[i]); j++ {
+					if i == j && A[i][j] != 1 {
+					return false
+					} else if i != j && A[i][j] != 0 {
+						return false
+					}
+				}
+			}
+			return true
+		} 
+		else {
+			return false
+		}
+	}
+	this.is_upper_triangular = fn() {
+		// Check if the matrix_ is upper triangular
+		if this.is_square() {
+			for i := 1; i < len(A); i++ {
+				for j := 0; j < i; j++ {
+					if A[i][j] != 0 {
+						return false
+					}
+				}
+			}
+			return true
+		} 
+		else {
+			return false
+		}
+	}
+	this.is_lower_triangular = fn() {
+		// Check if the matrix_ is lower triangular
+		if this.is_square() {
+			for i := 0; i < len(A); i++ {
+				for j := i + 1; j < len(A[i]); j++ {
+					if A[i][j] != 0 {
+						return false
+					}
+				}
+			}
+			return true
+		} 
+		else {
+			return false
+		}
+	}
+	this.is_orthogonal = fn() {
+		// Check if the matrix_ is an orthogonal matrix_
+		if this.is_square() {
+			transpose := this.transpose()
+			identity := matrix_.make_identity(len(A))
+			product := this.mul(transpose)
+			return product.is_identity()
+		} 
+		else {
+			return false
+		}
+	}
+	this.row = fn(rowIdx) {
+		// Get a specific row as a new matrix_
+		if rowIdx >= 0 && rowIdx < len(A) {
+			return matrix_([A[rowIdx]])
+		} 
+		else {
+			return error("Invalid row index!")
+		}
+	}
+	this.col = fn(colIdx) {
+		// Get a specific column as a new matrix_
+		if len(A) > 0 && colIdx >= 0 && colIdx < len(A[0]) {
+			col := []
+			for i := 0; i < len(A); i++ {
+				col = append(col, A[i][colIdx])
+			}
+			return matrix_([col])
+		}
+		else {
+			return error("Invalid column index!")
+		}
+	}
+	this.submatrix_ = fn(startRow, endRow, startCol, endCol) {
+		// Get a submatrix_ based on row and column indices
+		if startRow >= 0 && startRow < len(A) &&
+		endRow >= 0 && endRow < len(A) &&
+		startCol >= 0 && startCol < len(A[0]) &&
+		endCol >= 0 && endCol < len(A[0]) &&
+		startRow <= endRow && startCol <= endCol {
+			result := []
+			for i := startRow; i <= endRow; i++ {
+				row := []
+				for j := startCol; j <= endCol; j++ {
+					row = append(row, A[i][j])
+				}
+				result = append(result, row)
+			}
+			return matrix_(result)
+		} 
+		else {
+			return error("Invalid submatrix_ indices!")
+		}
+	}
+	this.is_equal = fn(B) {
+		if is_map(B) {
+			if is_matrix_(B.data) {
+				B = B.data
+			}
+		}
+		if is_matrix_(B) {
+			oB := matrix_(B).order()
+			if this.order() == oB {
+				for i := 0; i < len(A); i++ {
+					for j := 0; j < len(A[i]); j++ {
+						if A[i][j] != B[i][j] {
 							return false
 						}
 					}
 				}
 				return true
-			} 
-			else {
-				return false
 			}
-		},
-		trace: fn() {
-            // Calculate the trace of the matrix
-            if this.is_square() {
-                tr := 0
-                for i := 0; i < len(A); i++ {
-                    tr += A[i][i]
-				}
-				return tr
-			} 
-			else {
-                return error("Trace calculation requires a square matrix!")
-			}
-		},
-        is_zero: fn() {
-            // Check if all elements in the matrix are zero
-            for i := 0; i < len(A); i++ {
-                for j := 0; j < len(A[i]); j++ {
-                    if A[i][j] != 0 {
-                        return false
-					}
-				}
-			}
-            return true
-		},
-        is_identity: fn() {
-            // Check if the matrix is an identity matrix
-            if this.is_square() {
-                for i := 0; i < len(A); i++ {
-                    for j := 0; j < len(A[i]); j++ {
-                        if i == j && A[i][j] != 1 {
-						return false
-                        } else if i != j && A[i][j] != 0 {
-                            return false
-						}
-					}
-				}
-				return true
-			} 
-			else {
-                return false
-			}
-		},
-        is_upper_triangular: fn() {
-            // Check if the matrix is upper triangular
-            if this.is_square() {
-                for i := 1; i < len(A); i++ {
-                    for j := 0; j < i; j++ {
-                        if A[i][j] != 0 {
-                            return false
-						}
-					}
-				}
-				return true
-			} 
-			else {
-                return false
-			}
-		},
-        is_lower_triangular: fn() {
-            // Check if the matrix is lower triangular
-            if this.is_square() {
-                for i := 0; i < len(A); i++ {
-                    for j := i + 1; j < len(A[i]); j++ {
-                        if A[i][j] != 0 {
-                            return false
-						}
-					}
-				}
-				return true
-			} 
-			else {
-                return false
-			}
-		},
-        is_orthogonal: fn() {
-            // Check if the matrix is an orthogonal matrix
-            if this.is_square() {
-                transpose := this.transpose()
-                identity := matrix.make_identity(len(A))
-                product := this.mul(transpose)
-				return product.is_identity()
-			} 
-			else {
-                return false
-			}
-		},
-        row: fn(rowIdx) {
-            // Get a specific row as a new matrix
-            if rowIdx >= 0 && rowIdx < len(A) {
-                return matrix([A[rowIdx]])
-			} 
-			else {
-                return error("Invalid row index!")
-			}
-		},
-        col: fn(colIdx) {
-            // Get a specific column as a new matrix
-            if len(A) > 0 && colIdx >= 0 && colIdx < len(A[0]) {
-                col := []
-                for i := 0; i < len(A); i++ {
-                    col = append(col, A[i][colIdx])
-				}
-                return matrix([col])
-			}
-			else {
-                return error("Invalid column index!")
-			}
-		},
-        submatrix: fn(startRow, endRow, startCol, endCol) {
-            // Get a submatrix based on row and column indices
-            if startRow >= 0 && startRow < len(A) &&
-			endRow >= 0 && endRow < len(A) &&
-			startCol >= 0 && startCol < len(A[0]) &&
-			endCol >= 0 && endCol < len(A[0]) &&
-			startRow <= endRow && startCol <= endCol {
-                result := []
-                for i := startRow; i <= endRow; i++ {
-                    row := []
-                    for j := startCol; j <= endCol; j++ {
-                        row = append(row, A[i][j])
-					}
-                    result = append(result, row)
-				}
-                return matrix(result)
-			} 
-			else {
-                return error("Invalid submatrix indices!")
-			}
-		},
-		is_equal: fn(B) {
-			if is_map(B) {
-				if is_matrix(B.data) {
-					B = B.data
-				}
-			}
-            if is_matrix(B) {
-                oB := matrix(B).order()
-                if this.order() == oB {
-                    for i := 0; i < len(A); i++ {
-                        for j := 0; j < len(A[i]); j++ {
-                            if A[i][j] != B[i][j] {
-                                return false
-							}
-						}
-					}
-                    return true
-				}
-			}
-            return false
-		},
-		to_array : fn() {
-			result := []
-			for v in this.data {
-				result = append(result, v...)
-			}
-			return result
 		}
+		return false
+	}
+	this.to_array = fn() {
+		result := []
+		for v in this.data {
+			result = append(result, v...)
+		}
+		return result
 	}
 	return this
 }
 
 export {
     new: fn(A) {
-        if is_matrix(A) {
-			return matrix(A)
+        if is_matrix_(A) {
+			return matrix_(A)
 		} 
 		else {
-            return error("Invalid matrix!")
+            return error("Invalid matrix_!")
 		}
 	},
 	identity: fn(size) {
-		// Create an identity matrix of given size
+		// Create an identity matrix_ of given size
 		result := make_array(size, size, 0)
 		for i := 0; i < size; i++ {
 			result[i][i] = 1
 		}
-		return matrix(result)
+		return matrix_(result)
 	},
 	from_array : fn(arr, width) {
 		rows := []
@@ -455,6 +458,6 @@ export {
 			rows = append(rows, currentRow)
 		}
 		
-		return matrix(rows)
+		return matrix_(rows)
 	}
 }

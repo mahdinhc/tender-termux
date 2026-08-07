@@ -47,7 +47,7 @@ func audioInit(args ...tender.Object) (ret tender.Object, err error) {
 	var readyChan chan struct{}
     otoCtx, readyChan, err = oto.NewContext(op)
 	if err != nil {
-	return wrapError(err), nil
+		return wrapError(err), nil
 	}
 	<-readyChan
 	return &tender.ImmutableMap{

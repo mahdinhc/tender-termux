@@ -16,7 +16,7 @@ export {
 		file.close()
 		return file
 	},
-	isdir : fn(name) {
+	is_dir : fn(name) {
 		stat := os.stat(name)
 		if stat {
 			if stat.directory {

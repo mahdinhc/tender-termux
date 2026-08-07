@@ -1,4 +1,4 @@
-dll := import("dll")
+import "dll"
 
 export {
 	// To indicate the buttons displayed in the message box, specify one of the following values.
